@@ -150,9 +150,56 @@ def predict_dataset(sig, thr, dist_, det, clf, mu, sigma):
     X = torch.tensor(((X - mu) / sigma)[:, None, :], dtype=torch.float32)
     clf.eval()
     with torch.no_grad():
-        Class = np.concatenate([clf(X[i:i + 4096].to(device)).argmax(1).cpu().numpy()
-                                for i in range(0, len(X), 4096)]) + 1   # back to labels 1-5
+        #Class = np.concatenate([clf(X[i:i + 4096].to(device)).argmax(1).cpu().numpy()
+                               # for i in range(0, len(X), 4096)]) + 1   # back to labels 1-5
+        Class = classify(sig, Index, clf, mu, sigma) + 1      # back to labels 1-5
     return Index, Class
+
+def classify(sig, Index, clf, mu, sigma, batch=4096):
+    """Class (0-4) of the spike starting at each position in Index."""
+    if len(Index) == 0:
+        return np.array([], dtype=int)
+    X = windows(sig, Index, CLS_PRE, CLS_POST)
+    X = torch.tensor(((X - mu) / sigma)[:, None, :], dtype=torch.float32)
+    clf.eval()
+    with torch.no_grad():
+        return np.concatenate([clf(X[i:i + batch].to(DEVICE)).argmax(1).cpu().numpy()
+                               for i in range(0, len(X), batch)])
+
+
+def match_pairs(pred, true, tol=50):
+    """One-to-one matching within +/-tol samples. Returns a list of (pred_i, true_j)."""
+    order = np.argsort(pred)
+    pred_s = pred[order]
+    used = np.zeros(len(pred), bool)
+    pairs = []
+    for jt in np.argsort(true):
+        t = true[jt]
+        j = np.searchsorted(pred_s, t)
+        best = None
+        for k in (j - 1, j):
+            if 0 <= k < len(pred_s) and not used[k] and abs(pred_s[k] - t) <= tol:
+                if best is None or abs(pred_s[k] - t) < abs(pred_s[best] - t):
+                    best = k
+        if best is not None:
+            used[best] = True
+            pairs.append((order[best], jt))
+    return pairs
+
+
+def dataset_score(pred_idx, pred_cls, true_idx, true_cls, tol=50):
+    """Returns (F_ident, F_class, F_dataset = 0.3*F_ident + 0.7*F_class)."""
+    pairs = match_pairs(pred_idx, true_idx, tol)
+    found = len(pairs)
+    correct = sum(pred_cls[i] == true_cls[j] for i, j in pairs)
+
+    def f1(hits):
+        p = hits / max(len(pred_idx), 1)
+        r = hits / max(len(true_idx), 1)
+        return 2 * p * r / max(p + r, 1e-9)
+
+    f_ident, f_class = f1(found), f1(correct)
+    return f_ident, f_class, 0.3 * f_ident + 0.7 * f_class
 
 # Drift removal function
 def remove_baseline(sig, size=2501):
