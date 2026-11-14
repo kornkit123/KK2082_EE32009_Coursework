@@ -5,15 +5,38 @@ from scipy.signal import butter, filtfilt, welch
 from scipy.stats import kurtosis
 from Config import FS, DATA_DIR
 from Functions import load_data
+from pathlib import Path
+import Functions
+from scipy.ndimage import median_filter
 
-ds, Index1, Class1 = load_data(DATA_DIR)
+ds, Index, Class = load_data(DATA_DIR)
 d1, d6 = ds[0], ds[5]
 fs = FS
 PRE, POST = 40, 150
-ok = (Index1 >= PRE) & (Index1 < len(d1) - POST)      # keep windows inside the recording
-idx, cls = Index1[ok], Class1[ok]
+ok = (Index >= PRE) & (Index < len(d1) - POST)      # keep windows inside the recording
+idx, cls = Index[ok], Class[ok]
 
 #### ANALYSE NOISE CHARACTERISTICS OF D1-D6 ####
+#checking drift
+# Create a 3x2 grid of subplots before the loop
+fig, axes = plt.subplots(nrows=3, ncols=2, figsize=(15, 10))
+axes = axes.flatten()  # Flatten the 2D grid into a 1D list for easy indexing
+
+i = 0
+idx = 0
+for idx, i in enumerate(range(0, 6)):
+    dn = ds[i]
+    ax = axes[idx]  # Select the current subplot (index 0 to 5)
+    ax.set_title(f"Dataset {i+1}")  # Note: changed from {dn} so it doesn't print the whole array
+    ax.plot(dn[:100000], lw=0.5, label=f"Dataset {i+1} raw")
+    baseline = median_filter(dn[:100000], size=2501)  # about 0.1 s window
+    ax.plot(baseline, "r", label="slow baseline")
+    ax.legend()
+    i += 1  # Don't forget to increment i!
+
+plt.tight_layout()  # Adjusts spacing so titles and labels don't overlap
+plt.show()  # Show all 6 plots at once after the loop finishes
+
 #check if noise form D2 to D6 is white (flat) or coloured
 f, Pxx = welch(d1, fs=fs, nperseg=4096)
 plt.figure()
@@ -40,10 +63,10 @@ plt.hist(filtfilt(b, a, d6), bins=200, density=True)
 plt.show()
 
 #visualise the data
-print("d = ", len(d1), "\n", "Index = ", len(Index1), "\n", "Class = ", np.unique(Class1, return_counts=True))
+print("d = ", len(d1), "\n", "Index = ", len(Index), "\n", "Class = ", np.unique(Class, return_counts=True))
 plt.title("D1 data")
 #limit plotting to first 5000 samples for better visibility (max 1440000 samples)
-plt.plot(d1[:5000]); plt.plot(Index1[Index1 < 5000], d1[Index1[Index1 < 5000]], 'rx')
+plt.plot(d1[:5000]); plt.plot(Index[Index < 5000], d1[Index[Index < 5000]], 'rx')
 plt.show()
 
 # 4. Average spike shape for each class (all labelled spikes in D1)
@@ -57,6 +80,20 @@ plt.ylabel('Amplitude (mV)')
 plt.title('Average spike per class (D1)')
 plt.legend()
 plt.show()
+
+
+#plot D2 to D6
+ds, Index, Class = Functions.load_data(DATA_DIR)
+i = 1
+for d in ds:
+    print("d = ", len(d))
+    plt.figure()
+    plt.title(f"D{i} data")
+    #limit plotting to first 5000 samples for better visibility (max 1440000 samples)
+    plt.plot(d[:5000]); plt.plot(Index[Index < 5000], d[Index[Index < 5000]], 'rx')
+    plt.show()
+    i += 1
+
 
 #Apply Noise Filtering
 #fs = 25000   #25 kHz sampling frequency accroding to coursework specification

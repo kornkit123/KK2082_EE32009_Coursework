@@ -6,6 +6,9 @@ after looking at D1 data
 4. all noise are white noise
 5. D6 is gaussian noise
 
+After looking at signal from D1 to D6
+1. singal has drift which get worst with higher noise level
+
 plan
 1. train on D1 
 2. add synthetic noise to D1 during training
