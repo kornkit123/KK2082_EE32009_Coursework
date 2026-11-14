@@ -6,6 +6,7 @@ from pathlib import Path
 from torch.utils.data import TensorDataset, DataLoader
 from numpy.lib.stride_tricks import sliding_window_view
 from scipy.signal import find_peaks
+from scipy.ndimage import median_filter
 
 from Config import DET_PRE, DET_POST, CLS_PRE, CLS_POST, DEVICE
 device = DEVICE
@@ -152,3 +153,8 @@ def predict_dataset(sig, thr, dist_, det, clf, mu, sigma):
         Class = np.concatenate([clf(X[i:i + 4096].to(device)).argmax(1).cpu().numpy()
                                 for i in range(0, len(X), 4096)]) + 1   # back to labels 1-5
     return Index, Class
+
+# Drift removal function
+def remove_baseline(sig, size=2501):
+    """Subtract the slow baseline (about 0.1 s median) from a recording."""
+    return sig - median_filter(sig, size=size)
