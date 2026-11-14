@@ -13,6 +13,9 @@ plan
 1. train on D1 
 2. add synthetic noise to D1 during training
 3. have 2 different model: 1 for classification and 1 for detecting neuron signal spike
+4. remove drift
+future
+5. add noise filter
 
 validating detection model
 noise 0.309 | dist 15 | thr 0.9 | P 0.998 R 0.950 F1 0.973
