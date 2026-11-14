@@ -28,8 +28,8 @@ import Functions
 import Models
 from Config import DATA_DIR, DEVICE, DET_PRE, DET_POST, CLS_PRE, CLS_POST
 
-RETRAIN = True       # True: train and save models. False: load saved models.
-RUN_SWEEP = False    # True: print the threshold sweep (slow, only needed when tuning)
+RETRAIN = False       # True: train and save models. False: load saved models.
+RUN_SWEEP = True    # True: print the threshold sweep (slow, only needed when tuning)
 
 MODEL_DIR = Path('models')
 MODEL_DIR.mkdir(exist_ok=True)
@@ -185,17 +185,30 @@ for v in val_sets:
 # 9. Detector threshold sweep on validation data (optional)
 #    Use it to choose the (threshold, distance) pair for each dataset in `settings`.
 # ----------------------------------------------------------------------
+WEIGHTS = {2: 0.10, 3: 0.15, 4: 0.20, 5: 0.25, 6: 0.30}   # F_Final weights
+
 if RUN_SWEEP:
     start, stop = split + DET_PRE + M, len(d1) - DET_POST - M
-    for level in levels:
+    best = {}                                              # dataset number -> (F_dataset, thr, dist)
+    for n, level in enumerate(levels, 1):                  # n = 1 is D1, n = 2 is D2, ...
         sig = Functions.noisy_version(d1, level, base, rng)
         probs = Functions.detect_probs(det, sig, start, stop, mu=MU, sigma=SIGMA)
         for dist_ in (15, 25, 40):
             for thr in (0.7, 0.85, 0.9, 0.93, 0.95, 0.97, 0.98, 0.99):
                 peaks, _ = find_peaks(probs, height=thr, distance=dist_)
-                p, r, f1 = Functions.match_f1(peaks + start, va_Index1)
-                print(f'noise {level:.3f} | dist {dist_} | thr {thr} | '
-                      f'Precision {p:.3f} Recall {r:.3f} F1 {f1:.3f}')
+                Index = peaks + start
+                Index = Index[Index < len(sig) - CLS_POST]  # classifier window must fit
+                cls = Functions.classify(sig, Index, clf, MU, SIGMA)
+                f_id, f_cl, f_ds = Functions.dataset_score(Index, cls, va_Index1, va_Class1 - 1)
+                print(f'D{n} noise {level:.3f} | dist {dist_} | thr {thr} | '
+                      f'F_ident {f_id:.3f} F_class {f_cl:.3f} F_dataset {f_ds:.3f}')
+                if n >= 2 and f_ds > best.get(n, (-1,))[0]:
+                    best[n] = (f_ds, thr, dist_)
+
+    print('\nBest per dataset:')
+    for n in sorted(best):
+        print(f'D{n}: F_dataset {best[n][0]:.3f} at thr {best[n][1]}, dist {best[n][2]}')
+    print(f'Estimated F_Final: {sum(WEIGHTS[n] * best[n][0] for n in WEIGHTS):.3f}')
 
 # ----------------------------------------------------------------------
 # 10. Predict D2-D6 and export Index/Class files for the automarker
