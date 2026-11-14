@@ -9,7 +9,7 @@
 #   6. Build data loaders
 #   7. Train (or load) the classifier and the detector
 #   8. Validate the classifier
-#   9. Sweep detector thresholds on validation data (optional)
+#   9. Sweep detector thresholds and cal Fscore on validation data (optional)
 #  10. Predict D2-D6 and export the .mat submission files
 
 # ----------------------------------------------------------------------
