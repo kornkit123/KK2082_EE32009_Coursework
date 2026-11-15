@@ -9,7 +9,7 @@
 #   6. Build data loaders
 #   7. Train (or load) the classifier and the detector
 #   8. Validate the classifier
-#   9. Sweep detector thresholds on validation data (optional)
+#   9. Sweep detector thresholds on validation data & cal F (optional)
 #  10. Predict D2-D6 and export the .mat submission files
 
 # ----------------------------------------------------------------------
@@ -29,7 +29,7 @@ import Models
 from Config import DATA_DIR, DEVICE, DET_PRE, DET_POST, CLS_PRE, CLS_POST
 
 RETRAIN = False       # True: train and save models. False: load saved models.
-RUN_SWEEP = True    # True: print the threshold sweep (slow, only needed when tuning)
+RUN_SWEEP = False    # True: print the threshold sweep (slow, only needed when tuning)
 
 MODEL_DIR = Path('models')
 MODEL_DIR.mkdir(exist_ok=True)
@@ -149,8 +149,8 @@ det_val_dl = Functions.make_loader(np.concatenate([x for x, _ in det_val]),
 #    clf: which of the 5 neuron classes is this spike?   (5 outputs)
 #    det: is there a spike starting here?                (2 outputs)
 # ----------------------------------------------------------------------
-clf = Models.SpikeCNN(n_out=5)
-det = Models.SpikeCNN(n_out=2)
+clf = Models.SpikeCNN(n_out=5, lowpass_hz=4000)
+det = Models.SpikeCNN(n_out=2, lowpass_hz=4000)
 
 if RETRAIN:
     clf = Functions.train_model(clf, train_dl, val_dl, nn.CrossEntropyLoss(), epochs=80, patience=12, augment=augment)
@@ -228,3 +228,4 @@ for n in range(2, 7):
 # Check one saved file
 m = spio.loadmat(out_dir / 'D2.mat', squeeze_me=True)
 print(m.keys())      # should show Index and Class (plus __header__ entries)
+print(clf.features[0])      # test if LP filter is active -> should print FixedLowPass(...) if the filter is active

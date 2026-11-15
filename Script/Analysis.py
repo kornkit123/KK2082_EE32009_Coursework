@@ -8,6 +8,8 @@ from Functions import load_data
 from pathlib import Path
 import Functions
 from scipy.ndimage import median_filter
+import torch
+from Models import FixedLowPass
 
 ds, Index, Class = load_data(DATA_DIR)
 d1, d6 = ds[0], ds[5]
@@ -17,6 +19,19 @@ ok = (Index >= PRE) & (Index < len(d1) - POST)      # keep windows inside the re
 idx, cls = Index[ok], Class[ok]
 
 #### ANALYSE NOISE CHARACTERISTICS OF D1-D6 ####
+#check data after low pass filter
+
+lp = FixedLowPass(4000)
+seg = ds[5][20000:22000]                                  # 2000 samples of D6
+x = torch.tensor(seg, dtype=torch.float32).view(1, 1, -1)
+y = lp(x).view(-1).numpy()
+
+plt.figure(figsize=(12, 4))
+plt.plot(seg, lw=0.6, label='D6 cleaned')
+plt.plot(y, lw=1.2, label='after 4 kHz low-pass')
+plt.legend()
+plt.show()
+
 #checking drift
 # Create a 3x2 grid of subplots before the loop
 fig, axes = plt.subplots(nrows=3, ncols=2, figsize=(15, 10))
@@ -93,9 +108,3 @@ for d in ds:
     plt.plot(d[:5000]); plt.plot(Index[Index < 5000], d[Index[Index < 5000]], 'rx')
     plt.show()
     i += 1
-
-
-#Apply Noise Filtering
-#fs = 25000   #25 kHz sampling frequency accroding to coursework specification
-#b, a = butter(3, 2000/(fs/2), btype='low')   # try 1000-3000 Hz
-#d_f = filtfilt(b, a, d)                      # zero-phase, so no timing shift
