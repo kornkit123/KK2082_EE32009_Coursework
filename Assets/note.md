@@ -13,6 +13,8 @@ After looking at signal from D1 to D6
 Submission 3
 1. notice classification miss mainly on neuron class3
 this potentially because class3 is the weakest spike
+2. Classes 4 and 5 have similar shapes and differ mainly in amplitude (2.7 against 4.3). Noise blurs the amplitude, which is why 4 and 5 swap labels, especially at D6.
+3. Classes 1 and 2 have similar peaks (4.9 and 5.4). Class 1 is narrower, and Class 2 has a deeper undershoot after the peak and a bump later. Both are small features that noise hides.
 
 plan
 1. train on D1 
@@ -333,6 +335,1184 @@ noise 4.415 | dist 40 | thr 0.93 | Precision 0.919 Recall 0.523 F1 0.667
 noise 4.415 | dist 40 | thr 0.95 | Precision 0.950 Recall 0.499 F1 0.654
 noise 4.415 | dist 40 | thr 0.97 | Precision 0.953 Recall 0.449 F1 0.610
 noise 4.415 | dist 40 | thr 0.98 | Precision 0.962 Recall 0.410 F1 0.575
+
+
+
+showing class3 low recall percentage
+D4 noise 1.082 | dist 40 | thr 0.95 | F_ident 0.896 F_class 0.861 F_dataset 0.871
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.259
+   class 4: detector recall 0.944
+   class 5: detector recall 0.918
+D4 noise 1.082 | dist 40 | thr 0.97 | F_ident 0.880 F_class 0.844 F_dataset 0.854
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.138
+   class 4: detector recall 0.944
+   class 5: detector recall 0.918
+D4 noise 1.082 | dist 40 | thr 0.98 | F_ident 0.863 F_class 0.826 F_dataset 0.837
+   class 1: detector recall 0.976
+   class 2: detector recall 0.947
+   class 3: detector recall 0.034
+   class 4: detector recall 0.944
+   class 5: detector recall 0.918
+D4 noise 1.082 | dist 40 | thr 0.99 | F_ident 0.846 F_class 0.808 F_dataset 0.820
+   class 1: detector recall 0.988
+   class 2: detector recall 0.968
+   class 3: detector recall 0.284
+   class 4: detector recall 0.944
+   class 5: detector recall 0.938
+D5 noise 2.073 | dist 15 | thr 0.7 | F_ident 0.776 F_class 0.632 F_dataset 0.675
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.172
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D5 noise 2.073 | dist 15 | thr 0.85 | F_ident 0.834 F_class 0.675 F_dataset 0.722
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.155
+   class 4: detector recall 0.935
+   class 5: detector recall 0.928
+D5 noise 2.073 | dist 15 | thr 0.9 | F_ident 0.848 F_class 0.685 F_dataset 0.734
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.112
+   class 4: detector recall 0.925
+   class 5: detector recall 0.928
+D5 noise 2.073 | dist 15 | thr 0.93 | F_ident 0.849 F_class 0.692 F_dataset 0.739
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.095
+   class 4: detector recall 0.907
+   class 5: detector recall 0.928
+D5 noise 2.073 | dist 15 | thr 0.95 | F_ident 0.844 F_class 0.691 F_dataset 0.737
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.060
+   class 4: detector recall 0.907
+   class 5: detector recall 0.928
+D5 noise 2.073 | dist 15 | thr 0.97 | F_ident 0.845 F_class 0.692 F_dataset 0.738
+   class 1: detector recall 0.964
+   class 2: detector recall 0.957
+   class 3: detector recall 0.043
+   class 4: detector recall 0.860
+   class 5: detector recall 0.918
+D5 noise 2.073 | dist 15 | thr 0.98 | F_ident 0.833 F_class 0.685 F_dataset 0.730
+   class 1: detector recall 0.940
+   class 2: detector recall 0.957
+   class 3: detector recall 0.034
+   class 4: detector recall 0.701
+   class 5: detector recall 0.907
+D5 noise 2.073 | dist 15 | thr 0.99 | F_ident 0.805 F_class 0.661 F_dataset 0.704
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.276
+   class 4: detector recall 0.935
+   class 5: detector recall 0.938
+D5 noise 2.073 | dist 25 | thr 0.7 | F_ident 0.781 F_class 0.642 F_dataset 0.684
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.164
+   class 4: detector recall 0.935
+   class 5: detector recall 0.928
+D5 noise 2.073 | dist 25 | thr 0.85 | F_ident 0.839 F_class 0.684 F_dataset 0.731
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.147
+   class 4: detector recall 0.925
+   class 5: detector recall 0.928
+D5 noise 2.073 | dist 25 | thr 0.9 | F_ident 0.852 F_class 0.694 F_dataset 0.741
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.103
+   class 4: detector recall 0.925
+   class 5: detector recall 0.928
+D5 noise 2.073 | dist 25 | thr 0.93 | F_ident 0.850 F_class 0.695 F_dataset 0.741
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.095
+   class 4: detector recall 0.907
+   class 5: detector recall 0.918
+D5 noise 2.073 | dist 25 | thr 0.95 | F_ident 0.846 F_class 0.690 F_dataset 0.737
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.060
+   class 4: detector recall 0.907
+   class 5: detector recall 0.918
+D5 noise 2.073 | dist 25 | thr 0.97 | F_ident 0.845 F_class 0.689 F_dataset 0.736
+   class 1: detector recall 0.964
+   class 2: detector recall 0.957
+   class 3: detector recall 0.043
+   class 4: detector recall 0.860
+   class 5: detector recall 0.907
+D5 noise 2.073 | dist 25 | thr 0.98 | F_ident 0.832 F_class 0.682 F_dataset 0.727
+   class 1: detector recall 0.940
+   class 2: detector recall 0.957
+   class 3: detector recall 0.034
+   class 4: detector recall 0.701
+   class 5: detector recall 0.907
+D5 noise 2.073 | dist 25 | thr 0.99 | F_ident 0.805 F_class 0.661 F_dataset 0.704
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.276
+   class 4: detector recall 0.935
+   class 5: detector recall 0.918
+D5 noise 2.073 | dist 40 | thr 0.7 | F_ident 0.779 F_class 0.638 F_dataset 0.680
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.164
+   class 4: detector recall 0.935
+   class 5: detector recall 0.918
+D5 noise 2.073 | dist 40 | thr 0.85 | F_ident 0.838 F_class 0.681 F_dataset 0.728
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.147
+   class 4: detector recall 0.925
+   class 5: detector recall 0.918
+D5 noise 2.073 | dist 40 | thr 0.9 | F_ident 0.851 F_class 0.690 F_dataset 0.738
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.103
+   class 4: detector recall 0.925
+   class 5: detector recall 0.918
+D5 noise 2.073 | dist 40 | thr 0.93 | F_ident 0.849 F_class 0.691 F_dataset 0.738
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.095
+   class 4: detector recall 0.907
+   class 5: detector recall 0.918
+D5 noise 2.073 | dist 40 | thr 0.95 | F_ident 0.846 F_class 0.690 F_dataset 0.737
+   class 1: detector recall 0.976
+   class 2: detector recall 0.947
+   class 3: detector recall 0.060
+   class 4: detector recall 0.907
+   class 5: detector recall 0.918
+D5 noise 2.073 | dist 40 | thr 0.97 | F_ident 0.843 F_class 0.688 F_dataset 0.734
+   class 1: detector recall 0.964
+   class 2: detector recall 0.947
+   class 3: detector recall 0.043
+   class 4: detector recall 0.860
+   class 5: detector recall 0.907
+D5 noise 2.073 | dist 40 | thr 0.98 | F_ident 0.831 F_class 0.681 F_dataset 0.726
+   class 1: detector recall 0.940
+   class 2: detector recall 0.947
+   class 3: detector recall 0.034
+   class 4: detector recall 0.701
+   class 5: detector recall 0.907
+D5 noise 2.073 | dist 40 | thr 0.99 | F_ident 0.804 F_class 0.659 F_dataset 0.703
+   class 1: detector recall 0.976
+   class 2: detector recall 0.968
+   class 3: detector recall 0.259
+   class 4: detector recall 0.860
+   class 5: detector recall 0.948
+D6 noise 3.065 | dist 15 | thr 0.7 | F_ident 0.737 F_class 0.508 F_dataset 0.577
+   class 1: detector recall 0.940
+   class 2: detector recall 0.957
+   class 3: detector recall 0.138
+   class 4: detector recall 0.748
+   class 5: detector recall 0.928
+D6 noise 3.065 | dist 15 | thr 0.85 | F_ident 0.786 F_class 0.544 F_dataset 0.616
+   class 1: detector recall 0.928
+   class 2: detector recall 0.957
+   class 3: detector recall 0.078
+   class 4: detector recall 0.692
+   class 5: detector recall 0.928
+D6 noise 3.065 | dist 15 | thr 0.9 | F_ident 0.784 F_class 0.551 F_dataset 0.621
+   class 1: detector recall 0.880
+   class 2: detector recall 0.957
+   class 3: detector recall 0.043
+   class 4: detector recall 0.682
+   class 5: detector recall 0.928
+D6 noise 3.065 | dist 15 | thr 0.93 | F_ident 0.778 F_class 0.552 F_dataset 0.620
+   class 1: detector recall 0.867
+   class 2: detector recall 0.957
+   class 3: detector recall 0.043
+   class 4: detector recall 0.636
+   class 5: detector recall 0.918
+D6 noise 3.065 | dist 15 | thr 0.95 | F_ident 0.777 F_class 0.549 F_dataset 0.618
+   class 1: detector recall 0.819
+   class 2: detector recall 0.947
+   class 3: detector recall 0.043
+   class 4: detector recall 0.523
+   class 5: detector recall 0.907
+D6 noise 3.065 | dist 15 | thr 0.97 | F_ident 0.757 F_class 0.532 F_dataset 0.600
+   class 1: detector recall 0.807
+   class 2: detector recall 0.936
+   class 3: detector recall 0.043
+   class 4: detector recall 0.467
+   class 5: detector recall 0.897
+D6 noise 3.065 | dist 15 | thr 0.98 | F_ident 0.746 F_class 0.520 F_dataset 0.588
+   class 1: detector recall 0.663
+   class 2: detector recall 0.904
+   class 3: detector recall 0.026
+   class 4: detector recall 0.402
+   class 5: detector recall 0.897
+D6 noise 3.065 | dist 15 | thr 0.99 | F_ident 0.709 F_class 0.496 F_dataset 0.560
+   class 1: detector recall 0.964
+   class 2: detector recall 0.947
+   class 3: detector recall 0.233
+   class 4: detector recall 0.850
+   class 5: detector recall 0.928
+D6 noise 3.065 | dist 25 | thr 0.7 | F_ident 0.741 F_class 0.515 F_dataset 0.583
+   class 1: detector recall 0.928
+   class 2: detector recall 0.947
+   class 3: detector recall 0.129
+   class 4: detector recall 0.748
+   class 5: detector recall 0.918
+D6 noise 3.065 | dist 25 | thr 0.85 | F_ident 0.789 F_class 0.548 F_dataset 0.620
+   class 1: detector recall 0.916
+   class 2: detector recall 0.947
+   class 3: detector recall 0.078
+   class 4: detector recall 0.692
+   class 5: detector recall 0.918
+D6 noise 3.065 | dist 25 | thr 0.9 | F_ident 0.785 F_class 0.552 F_dataset 0.622
+   class 1: detector recall 0.880
+   class 2: detector recall 0.947
+   class 3: detector recall 0.043
+   class 4: detector recall 0.682
+   class 5: detector recall 0.918
+D6 noise 3.065 | dist 25 | thr 0.93 | F_ident 0.780 F_class 0.552 F_dataset 0.620
+   class 1: detector recall 0.867
+   class 2: detector recall 0.947
+   class 3: detector recall 0.043
+   class 4: detector recall 0.636
+   class 5: detector recall 0.907
+D6 noise 3.065 | dist 25 | thr 0.95 | F_ident 0.777 F_class 0.548 F_dataset 0.616
+   class 1: detector recall 0.819
+   class 2: detector recall 0.936
+   class 3: detector recall 0.043
+   class 4: detector recall 0.523
+   class 5: detector recall 0.897
+D6 noise 3.065 | dist 25 | thr 0.97 | F_ident 0.756 F_class 0.530 F_dataset 0.598
+   class 1: detector recall 0.807
+   class 2: detector recall 0.936
+   class 3: detector recall 0.043
+   class 4: detector recall 0.467
+   class 5: detector recall 0.897
+D6 noise 3.065 | dist 25 | thr 0.98 | F_ident 0.746 F_class 0.520 F_dataset 0.588
+   class 1: detector recall 0.663
+   class 2: detector recall 0.904
+   class 3: detector recall 0.026
+   class 4: detector recall 0.402
+   class 5: detector recall 0.897
+D6 noise 3.065 | dist 25 | thr 0.99 | F_ident 0.709 F_class 0.496 F_dataset 0.560
+   class 1: detector recall 0.964
+   class 2: detector recall 0.947
+   class 3: detector recall 0.233
+   class 4: detector recall 0.850
+   class 5: detector recall 0.918
+D6 noise 3.065 | dist 40 | thr 0.7 | F_ident 0.743 F_class 0.514 F_dataset 0.583
+   class 1: detector recall 0.928
+   class 2: detector recall 0.947
+   class 3: detector recall 0.129
+   class 4: detector recall 0.748
+   class 5: detector recall 0.907
+D6 noise 3.065 | dist 40 | thr 0.85 | F_ident 0.788 F_class 0.546 F_dataset 0.619
+   class 1: detector recall 0.916
+   class 2: detector recall 0.947
+   class 3: detector recall 0.078
+   class 4: detector recall 0.692
+   class 5: detector recall 0.907
+D6 noise 3.065 | dist 40 | thr 0.9 | F_ident 0.783 F_class 0.550 F_dataset 0.620
+   class 1: detector recall 0.880
+   class 2: detector recall 0.947
+   class 3: detector recall 0.043
+   class 4: detector recall 0.682
+   class 5: detector recall 0.907
+D6 noise 3.065 | dist 40 | thr 0.93 | F_ident 0.778 F_class 0.550 F_dataset 0.619
+   class 1: detector recall 0.867
+   class 2: detector recall 0.947
+   class 3: detector recall 0.043
+   class 4: detector recall 0.636
+   class 5: detector recall 0.907
+D6 noise 3.065 | dist 40 | thr 0.95 | F_ident 0.777 F_class 0.548 F_dataset 0.616
+   class 1: detector recall 0.819
+   class 2: detector recall 0.936
+   class 3: detector recall 0.043
+   class 4: detector recall 0.523
+   class 5: detector recall 0.897
+D6 noise 3.065 | dist 40 | thr 0.97 | F_ident 0.756 F_class 0.530 F_dataset 0.598
+   class 1: detector recall 0.807
+   class 2: detector recall 0.936
+   class 3: detector recall 0.043
+   class 4: detector recall 0.467
+   class 5: detector recall 0.897
+D6 noise 3.065 | dist 40 | thr 0.98 | F_ident 0.746 F_class 0.520 F_dataset 0.588
+   class 1: detector recall 0.663
+   class 2: detector recall 0.904
+   class 3: detector recall 0.026
+   class 4: detector recall 0.402
+   class 5: detector recall 0.897
+D6 noise 3.065 | dist 40 | thr 0.99 | F_ident 0.709 F_class 0.496 F_dataset 0.560
+
+improve by x3 the number of training for each class 3 signal
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.948
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D1 noise 0.222 | dist 15 | thr 0.7 | F_ident 0.974 F_class 0.954 F_dataset 0.960
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.948
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D1 noise 0.222 | dist 15 | thr 0.85 | F_ident 0.974 F_class 0.954 F_dataset 0.960
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.948
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D1 noise 0.222 | dist 15 | thr 0.9 | F_ident 0.974 F_class 0.954 F_dataset 0.960
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.948
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D1 noise 0.222 | dist 15 | thr 0.93 | F_ident 0.974 F_class 0.954 F_dataset 0.960
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.948
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D1 noise 0.222 | dist 15 | thr 0.95 | F_ident 0.974 F_class 0.954 F_dataset 0.960
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.948
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D1 noise 0.222 | dist 15 | thr 0.97 | F_ident 0.974 F_class 0.954 F_dataset 0.960
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.948
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D1 noise 0.222 | dist 15 | thr 0.98 | F_ident 0.974 F_class 0.954 F_dataset 0.960
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.948
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D1 noise 0.222 | dist 15 | thr 0.99 | F_ident 0.974 F_class 0.954 F_dataset 0.960
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.948
+   class 4: detector recall 0.944
+   class 5: detector recall 0.918
+D1 noise 0.222 | dist 25 | thr 0.7 | F_ident 0.973 F_class 0.952 F_dataset 0.959
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.948
+   class 4: detector recall 0.944
+   class 5: detector recall 0.918
+D1 noise 0.222 | dist 25 | thr 0.85 | F_ident 0.973 F_class 0.952 F_dataset 0.959
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.948
+   class 4: detector recall 0.944
+   class 5: detector recall 0.918
+D1 noise 0.222 | dist 25 | thr 0.9 | F_ident 0.973 F_class 0.952 F_dataset 0.959
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.948
+   class 4: detector recall 0.944
+   class 5: detector recall 0.918
+D1 noise 0.222 | dist 25 | thr 0.93 | F_ident 0.973 F_class 0.952 F_dataset 0.959
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.948
+   class 4: detector recall 0.944
+   class 5: detector recall 0.918
+D1 noise 0.222 | dist 25 | thr 0.95 | F_ident 0.973 F_class 0.952 F_dataset 0.959
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.948
+   class 4: detector recall 0.944
+   class 5: detector recall 0.918
+D1 noise 0.222 | dist 25 | thr 0.97 | F_ident 0.973 F_class 0.952 F_dataset 0.959
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.948
+   class 4: detector recall 0.944
+   class 5: detector recall 0.918
+D1 noise 0.222 | dist 25 | thr 0.98 | F_ident 0.973 F_class 0.952 F_dataset 0.959
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.948
+   class 4: detector recall 0.944
+   class 5: detector recall 0.918
+D1 noise 0.222 | dist 25 | thr 0.99 | F_ident 0.973 F_class 0.952 F_dataset 0.959
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.948
+   class 4: detector recall 0.944
+   class 5: detector recall 0.907
+D1 noise 0.222 | dist 40 | thr 0.7 | F_ident 0.972 F_class 0.951 F_dataset 0.958
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.948
+   class 4: detector recall 0.944
+   class 5: detector recall 0.907
+D1 noise 0.222 | dist 40 | thr 0.85 | F_ident 0.972 F_class 0.951 F_dataset 0.958
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.948
+   class 4: detector recall 0.944
+   class 5: detector recall 0.907
+D1 noise 0.222 | dist 40 | thr 0.9 | F_ident 0.972 F_class 0.951 F_dataset 0.958
+   class 1: detector recall 0.976
+   class 2: detector recall 0.947
+   class 3: detector recall 0.948
+   class 4: detector recall 0.944
+   class 5: detector recall 0.907
+D1 noise 0.222 | dist 40 | thr 0.93 | F_ident 0.971 F_class 0.950 F_dataset 0.957
+   class 1: detector recall 0.976
+   class 2: detector recall 0.947
+   class 3: detector recall 0.948
+   class 4: detector recall 0.944
+   class 5: detector recall 0.907
+D1 noise 0.222 | dist 40 | thr 0.95 | F_ident 0.971 F_class 0.950 F_dataset 0.957
+   class 1: detector recall 0.976
+   class 2: detector recall 0.947
+   class 3: detector recall 0.948
+   class 4: detector recall 0.944
+   class 5: detector recall 0.907
+D1 noise 0.222 | dist 40 | thr 0.97 | F_ident 0.971 F_class 0.950 F_dataset 0.957
+   class 1: detector recall 0.976
+   class 2: detector recall 0.947
+   class 3: detector recall 0.948
+   class 4: detector recall 0.944
+   class 5: detector recall 0.907
+D1 noise 0.222 | dist 40 | thr 0.98 | F_ident 0.971 F_class 0.950 F_dataset 0.957
+   class 1: detector recall 0.976
+   class 2: detector recall 0.947
+   class 3: detector recall 0.948
+   class 4: detector recall 0.944
+   class 5: detector recall 0.907
+D1 noise 0.222 | dist 40 | thr 0.99 | F_ident 0.971 F_class 0.950 F_dataset 0.957
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.948
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D2 noise 0.438 | dist 15 | thr 0.7 | F_ident 0.973 F_class 0.953 F_dataset 0.959
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.948
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D2 noise 0.438 | dist 15 | thr 0.85 | F_ident 0.974 F_class 0.954 F_dataset 0.960
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.948
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D2 noise 0.438 | dist 15 | thr 0.9 | F_ident 0.974 F_class 0.954 F_dataset 0.960
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.948
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D2 noise 0.438 | dist 15 | thr 0.93 | F_ident 0.974 F_class 0.954 F_dataset 0.960
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.948
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D2 noise 0.438 | dist 15 | thr 0.95 | F_ident 0.974 F_class 0.954 F_dataset 0.960
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.940
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D2 noise 0.438 | dist 15 | thr 0.97 | F_ident 0.973 F_class 0.952 F_dataset 0.959
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.940
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D2 noise 0.438 | dist 15 | thr 0.98 | F_ident 0.973 F_class 0.952 F_dataset 0.959
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.940
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D2 noise 0.438 | dist 15 | thr 0.99 | F_ident 0.973 F_class 0.952 F_dataset 0.959
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.948
+   class 4: detector recall 0.944
+   class 5: detector recall 0.918
+D2 noise 0.438 | dist 25 | thr 0.7 | F_ident 0.972 F_class 0.951 F_dataset 0.958
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.948
+   class 4: detector recall 0.944
+   class 5: detector recall 0.918
+D2 noise 0.438 | dist 25 | thr 0.85 | F_ident 0.973 F_class 0.952 F_dataset 0.959
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.948
+   class 4: detector recall 0.944
+   class 5: detector recall 0.918
+D2 noise 0.438 | dist 25 | thr 0.9 | F_ident 0.973 F_class 0.952 F_dataset 0.959
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.948
+   class 4: detector recall 0.944
+   class 5: detector recall 0.918
+D2 noise 0.438 | dist 25 | thr 0.93 | F_ident 0.973 F_class 0.952 F_dataset 0.959
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.948
+   class 4: detector recall 0.944
+   class 5: detector recall 0.918
+D2 noise 0.438 | dist 25 | thr 0.95 | F_ident 0.973 F_class 0.952 F_dataset 0.959
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.940
+   class 4: detector recall 0.944
+   class 5: detector recall 0.918
+D2 noise 0.438 | dist 25 | thr 0.97 | F_ident 0.972 F_class 0.951 F_dataset 0.958
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.940
+   class 4: detector recall 0.944
+   class 5: detector recall 0.918
+D2 noise 0.438 | dist 25 | thr 0.98 | F_ident 0.972 F_class 0.951 F_dataset 0.958
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.940
+   class 4: detector recall 0.944
+   class 5: detector recall 0.918
+D2 noise 0.438 | dist 25 | thr 0.99 | F_ident 0.972 F_class 0.951 F_dataset 0.958
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.948
+   class 4: detector recall 0.944
+   class 5: detector recall 0.907
+D2 noise 0.438 | dist 40 | thr 0.7 | F_ident 0.971 F_class 0.948 F_dataset 0.955
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.948
+   class 4: detector recall 0.944
+   class 5: detector recall 0.907
+D2 noise 0.438 | dist 40 | thr 0.85 | F_ident 0.972 F_class 0.949 F_dataset 0.956
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.948
+   class 4: detector recall 0.944
+   class 5: detector recall 0.907
+D2 noise 0.438 | dist 40 | thr 0.9 | F_ident 0.972 F_class 0.949 F_dataset 0.956
+   class 1: detector recall 0.976
+   class 2: detector recall 0.947
+   class 3: detector recall 0.948
+   class 4: detector recall 0.944
+   class 5: detector recall 0.907
+D2 noise 0.438 | dist 40 | thr 0.93 | F_ident 0.971 F_class 0.948 F_dataset 0.955
+   class 1: detector recall 0.976
+   class 2: detector recall 0.947
+   class 3: detector recall 0.948
+   class 4: detector recall 0.944
+   class 5: detector recall 0.907
+D2 noise 0.438 | dist 40 | thr 0.95 | F_ident 0.971 F_class 0.948 F_dataset 0.955
+   class 1: detector recall 0.976
+   class 2: detector recall 0.947
+   class 3: detector recall 0.940
+   class 4: detector recall 0.944
+   class 5: detector recall 0.907
+D2 noise 0.438 | dist 40 | thr 0.97 | F_ident 0.970 F_class 0.947 F_dataset 0.954
+   class 1: detector recall 0.976
+   class 2: detector recall 0.947
+   class 3: detector recall 0.940
+   class 4: detector recall 0.944
+   class 5: detector recall 0.907
+D2 noise 0.438 | dist 40 | thr 0.98 | F_ident 0.970 F_class 0.947 F_dataset 0.954
+   class 1: detector recall 0.976
+   class 2: detector recall 0.947
+   class 3: detector recall 0.940
+   class 4: detector recall 0.944
+   class 5: detector recall 0.907
+D2 noise 0.438 | dist 40 | thr 0.99 | F_ident 0.970 F_class 0.947 F_dataset 0.954
+   class 1: detector recall 0.976
+   class 2: detector recall 0.968
+   class 3: detector recall 0.940
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D3 noise 0.648 | dist 15 | thr 0.7 | F_ident 0.966 F_class 0.948 F_dataset 0.953
+   class 1: detector recall 0.976
+   class 2: detector recall 0.968
+   class 3: detector recall 0.940
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D3 noise 0.648 | dist 15 | thr 0.85 | F_ident 0.968 F_class 0.950 F_dataset 0.955
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.940
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D3 noise 0.648 | dist 15 | thr 0.9 | F_ident 0.971 F_class 0.953 F_dataset 0.958
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.940
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D3 noise 0.648 | dist 15 | thr 0.93 | F_ident 0.972 F_class 0.954 F_dataset 0.959
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.940
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D3 noise 0.648 | dist 15 | thr 0.95 | F_ident 0.972 F_class 0.954 F_dataset 0.959
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.931
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D3 noise 0.648 | dist 15 | thr 0.97 | F_ident 0.972 F_class 0.953 F_dataset 0.959
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.922
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D3 noise 0.648 | dist 15 | thr 0.98 | F_ident 0.971 F_class 0.952 F_dataset 0.958
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.879
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D3 noise 0.648 | dist 15 | thr 0.99 | F_ident 0.966 F_class 0.947 F_dataset 0.953
+   class 1: detector recall 0.976
+   class 2: detector recall 0.968
+   class 3: detector recall 0.940
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D3 noise 0.648 | dist 25 | thr 0.7 | F_ident 0.966 F_class 0.948 F_dataset 0.953
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.940
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D3 noise 0.648 | dist 25 | thr 0.85 | F_ident 0.967 F_class 0.949 F_dataset 0.954
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.940
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D3 noise 0.648 | dist 25 | thr 0.9 | F_ident 0.971 F_class 0.953 F_dataset 0.958
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.940
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D3 noise 0.648 | dist 25 | thr 0.93 | F_ident 0.972 F_class 0.954 F_dataset 0.959
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.940
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D3 noise 0.648 | dist 25 | thr 0.95 | F_ident 0.972 F_class 0.954 F_dataset 0.959
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.931
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D3 noise 0.648 | dist 25 | thr 0.97 | F_ident 0.972 F_class 0.953 F_dataset 0.959
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.922
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D3 noise 0.648 | dist 25 | thr 0.98 | F_ident 0.971 F_class 0.952 F_dataset 0.958
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.879
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D3 noise 0.648 | dist 25 | thr 0.99 | F_ident 0.966 F_class 0.947 F_dataset 0.953
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.940
+   class 4: detector recall 0.944
+   class 5: detector recall 0.918
+D3 noise 0.648 | dist 40 | thr 0.7 | F_ident 0.964 F_class 0.946 F_dataset 0.951
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.940
+   class 4: detector recall 0.944
+   class 5: detector recall 0.918
+D3 noise 0.648 | dist 40 | thr 0.85 | F_ident 0.966 F_class 0.948 F_dataset 0.953
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.940
+   class 4: detector recall 0.944
+   class 5: detector recall 0.918
+D3 noise 0.648 | dist 40 | thr 0.9 | F_ident 0.970 F_class 0.951 F_dataset 0.957
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.940
+   class 4: detector recall 0.944
+   class 5: detector recall 0.918
+D3 noise 0.648 | dist 40 | thr 0.93 | F_ident 0.971 F_class 0.952 F_dataset 0.958
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.940
+   class 4: detector recall 0.944
+   class 5: detector recall 0.918
+D3 noise 0.648 | dist 40 | thr 0.95 | F_ident 0.971 F_class 0.952 F_dataset 0.958
+   class 1: detector recall 0.976
+   class 2: detector recall 0.947
+   class 3: detector recall 0.931
+   class 4: detector recall 0.944
+   class 5: detector recall 0.918
+D3 noise 0.648 | dist 40 | thr 0.97 | F_ident 0.970 F_class 0.951 F_dataset 0.957
+   class 1: detector recall 0.976
+   class 2: detector recall 0.947
+   class 3: detector recall 0.922
+   class 4: detector recall 0.944
+   class 5: detector recall 0.918
+D3 noise 0.648 | dist 40 | thr 0.98 | F_ident 0.969 F_class 0.950 F_dataset 0.956
+   class 1: detector recall 0.976
+   class 2: detector recall 0.947
+   class 3: detector recall 0.879
+   class 4: detector recall 0.944
+   class 5: detector recall 0.918
+D3 noise 0.648 | dist 40 | thr 0.99 | F_ident 0.964 F_class 0.945 F_dataset 0.950
+   class 1: detector recall 0.988
+   class 2: detector recall 0.968
+   class 3: detector recall 0.871
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D4 noise 1.082 | dist 15 | thr 0.7 | F_ident 0.807 F_class 0.781 F_dataset 0.788
+   class 1: detector recall 0.976
+   class 2: detector recall 0.968
+   class 3: detector recall 0.862
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D4 noise 1.082 | dist 15 | thr 0.85 | F_ident 0.873 F_class 0.846 F_dataset 0.854
+   class 1: detector recall 0.976
+   class 2: detector recall 0.968
+   class 3: detector recall 0.793
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D4 noise 1.082 | dist 15 | thr 0.9 | F_ident 0.902 F_class 0.874 F_dataset 0.882
+   class 1: detector recall 0.976
+   class 2: detector recall 0.968
+   class 3: detector recall 0.741
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D4 noise 1.082 | dist 15 | thr 0.93 | F_ident 0.914 F_class 0.885 F_dataset 0.894
+   class 1: detector recall 0.976
+   class 2: detector recall 0.968
+   class 3: detector recall 0.664
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D4 noise 1.082 | dist 15 | thr 0.95 | F_ident 0.915 F_class 0.886 F_dataset 0.894
+   class 1: detector recall 0.976
+   class 2: detector recall 0.968
+   class 3: detector recall 0.517
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D4 noise 1.082 | dist 15 | thr 0.97 | F_ident 0.909 F_class 0.879 F_dataset 0.888
+   class 1: detector recall 0.976
+   class 2: detector recall 0.968
+   class 3: detector recall 0.397
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D4 noise 1.082 | dist 15 | thr 0.98 | F_ident 0.899 F_class 0.866 F_dataset 0.876
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.147
+   class 4: detector recall 0.935
+   class 5: detector recall 0.928
+D4 noise 1.082 | dist 15 | thr 0.99 | F_ident 0.863 F_class 0.831 F_dataset 0.841
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.871
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D4 noise 1.082 | dist 25 | thr 0.7 | F_ident 0.814 F_class 0.787 F_dataset 0.795
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.862
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D4 noise 1.082 | dist 25 | thr 0.85 | F_ident 0.876 F_class 0.847 F_dataset 0.856
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.793
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D4 noise 1.082 | dist 25 | thr 0.9 | F_ident 0.903 F_class 0.874 F_dataset 0.883
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.741
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D4 noise 1.082 | dist 25 | thr 0.93 | F_ident 0.913 F_class 0.883 F_dataset 0.892
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.664
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D4 noise 1.082 | dist 25 | thr 0.95 | F_ident 0.915 F_class 0.883 F_dataset 0.893
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.517
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D4 noise 1.082 | dist 25 | thr 0.97 | F_ident 0.909 F_class 0.876 F_dataset 0.886
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.397
+   class 4: detector recall 0.944
+   class 5: detector recall 0.928
+D4 noise 1.082 | dist 25 | thr 0.98 | F_ident 0.898 F_class 0.865 F_dataset 0.875
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.147
+   class 4: detector recall 0.935
+   class 5: detector recall 0.928
+D4 noise 1.082 | dist 25 | thr 0.99 | F_ident 0.863 F_class 0.831 F_dataset 0.841
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.871
+   class 4: detector recall 0.944
+   class 5: detector recall 0.918
+D4 noise 1.082 | dist 40 | thr 0.7 | F_ident 0.816 F_class 0.789 F_dataset 0.797
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.862
+   class 4: detector recall 0.944
+   class 5: detector recall 0.918
+D4 noise 1.082 | dist 40 | thr 0.85 | F_ident 0.876 F_class 0.848 F_dataset 0.856
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.793
+   class 4: detector recall 0.944
+   class 5: detector recall 0.918
+D4 noise 1.082 | dist 40 | thr 0.9 | F_ident 0.904 F_class 0.874 F_dataset 0.883
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.741
+   class 4: detector recall 0.944
+   class 5: detector recall 0.918
+D4 noise 1.082 | dist 40 | thr 0.93 | F_ident 0.913 F_class 0.883 F_dataset 0.892
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.664
+   class 4: detector recall 0.944
+   class 5: detector recall 0.918
+D4 noise 1.082 | dist 40 | thr 0.95 | F_ident 0.913 F_class 0.882 F_dataset 0.892
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.517
+   class 4: detector recall 0.944
+   class 5: detector recall 0.918
+D4 noise 1.082 | dist 40 | thr 0.97 | F_ident 0.907 F_class 0.875 F_dataset 0.885
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.397
+   class 4: detector recall 0.944
+   class 5: detector recall 0.918
+D4 noise 1.082 | dist 40 | thr 0.98 | F_ident 0.896 F_class 0.863 F_dataset 0.873
+   class 1: detector recall 0.976
+   class 2: detector recall 0.947
+   class 3: detector recall 0.147
+   class 4: detector recall 0.935
+   class 5: detector recall 0.918
+D4 noise 1.082 | dist 40 | thr 0.99 | F_ident 0.860 F_class 0.828 F_dataset 0.838
+   class 1: detector recall 0.988
+   class 2: detector recall 0.968
+   class 3: detector recall 0.362
+   class 4: detector recall 0.953
+   class 5: detector recall 0.928
+D5 noise 2.073 | dist 15 | thr 0.7 | F_ident 0.741 F_class 0.638 F_dataset 0.669
+   class 1: detector recall 0.988
+   class 2: detector recall 0.968
+   class 3: detector recall 0.198
+   class 4: detector recall 0.916
+   class 5: detector recall 0.928
+D5 noise 2.073 | dist 15 | thr 0.85 | F_ident 0.826 F_class 0.712 F_dataset 0.746
+   class 1: detector recall 0.976
+   class 2: detector recall 0.968
+   class 3: detector recall 0.138
+   class 4: detector recall 0.897
+   class 5: detector recall 0.928
+D5 noise 2.073 | dist 15 | thr 0.9 | F_ident 0.838 F_class 0.726 F_dataset 0.759
+   class 1: detector recall 0.976
+   class 2: detector recall 0.968
+   class 3: detector recall 0.069
+   class 4: detector recall 0.897
+   class 5: detector recall 0.928
+D5 noise 2.073 | dist 15 | thr 0.93 | F_ident 0.837 F_class 0.725 F_dataset 0.758
+   class 1: detector recall 0.976
+   class 2: detector recall 0.968
+   class 3: detector recall 0.052
+   class 4: detector recall 0.879
+   class 5: detector recall 0.928
+D5 noise 2.073 | dist 15 | thr 0.95 | F_ident 0.834 F_class 0.726 F_dataset 0.758
+   class 1: detector recall 0.952
+   class 2: detector recall 0.957
+   class 3: detector recall 0.052
+   class 4: detector recall 0.813
+   class 5: detector recall 0.928
+D5 noise 2.073 | dist 15 | thr 0.97 | F_ident 0.822 F_class 0.715 F_dataset 0.747
+   class 1: detector recall 0.940
+   class 2: detector recall 0.957
+   class 3: detector recall 0.043
+   class 4: detector recall 0.720
+   class 5: detector recall 0.928
+D5 noise 2.073 | dist 15 | thr 0.98 | F_ident 0.808 F_class 0.701 F_dataset 0.733
+   class 1: detector recall 0.904
+   class 2: detector recall 0.947
+   class 3: detector recall 0.026
+   class 4: detector recall 0.551
+   class 5: detector recall 0.918
+D5 noise 2.073 | dist 15 | thr 0.99 | F_ident 0.774 F_class 0.671 F_dataset 0.702
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.362
+   class 4: detector recall 0.944
+   class 5: detector recall 0.918
+D5 noise 2.073 | dist 25 | thr 0.7 | F_ident 0.760 F_class 0.656 F_dataset 0.687
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.198
+   class 4: detector recall 0.907
+   class 5: detector recall 0.918
+D5 noise 2.073 | dist 25 | thr 0.85 | F_ident 0.831 F_class 0.719 F_dataset 0.753
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.138
+   class 4: detector recall 0.888
+   class 5: detector recall 0.918
+D5 noise 2.073 | dist 25 | thr 0.9 | F_ident 0.840 F_class 0.729 F_dataset 0.763
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.069
+   class 4: detector recall 0.888
+   class 5: detector recall 0.918
+D5 noise 2.073 | dist 25 | thr 0.93 | F_ident 0.837 F_class 0.727 F_dataset 0.760
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.052
+   class 4: detector recall 0.879
+   class 5: detector recall 0.918
+D5 noise 2.073 | dist 25 | thr 0.95 | F_ident 0.836 F_class 0.727 F_dataset 0.760
+   class 1: detector recall 0.952
+   class 2: detector recall 0.957
+   class 3: detector recall 0.052
+   class 4: detector recall 0.813
+   class 5: detector recall 0.918
+D5 noise 2.073 | dist 25 | thr 0.97 | F_ident 0.826 F_class 0.718 F_dataset 0.750
+   class 1: detector recall 0.940
+   class 2: detector recall 0.957
+   class 3: detector recall 0.043
+   class 4: detector recall 0.720
+   class 5: detector recall 0.918
+D5 noise 2.073 | dist 25 | thr 0.98 | F_ident 0.810 F_class 0.703 F_dataset 0.735
+   class 1: detector recall 0.904
+   class 2: detector recall 0.947
+   class 3: detector recall 0.026
+   class 4: detector recall 0.551
+   class 5: detector recall 0.907
+D5 noise 2.073 | dist 25 | thr 0.99 | F_ident 0.774 F_class 0.671 F_dataset 0.702
+   class 1: detector recall 0.976
+   class 2: detector recall 0.957
+   class 3: detector recall 0.362
+   class 4: detector recall 0.944
+   class 5: detector recall 0.907
+D5 noise 2.073 | dist 40 | thr 0.7 | F_ident 0.761 F_class 0.655 F_dataset 0.687
+   class 1: detector recall 0.976
+   class 2: detector recall 0.947
+   class 3: detector recall 0.198
+   class 4: detector recall 0.907
+   class 5: detector recall 0.907
+D5 noise 2.073 | dist 40 | thr 0.85 | F_ident 0.828 F_class 0.712 F_dataset 0.747
+   class 1: detector recall 0.976
+   class 2: detector recall 0.947
+   class 3: detector recall 0.138
+   class 4: detector recall 0.888
+   class 5: detector recall 0.907
+D5 noise 2.073 | dist 40 | thr 0.9 | F_ident 0.838 F_class 0.722 F_dataset 0.757
+   class 1: detector recall 0.976
+   class 2: detector recall 0.947
+   class 3: detector recall 0.069
+   class 4: detector recall 0.888
+   class 5: detector recall 0.907
+D5 noise 2.073 | dist 40 | thr 0.93 | F_ident 0.835 F_class 0.719 F_dataset 0.754
+   class 1: detector recall 0.976
+   class 2: detector recall 0.947
+   class 3: detector recall 0.052
+   class 4: detector recall 0.879
+   class 5: detector recall 0.907
+D5 noise 2.073 | dist 40 | thr 0.95 | F_ident 0.834 F_class 0.719 F_dataset 0.754
+   class 1: detector recall 0.952
+   class 2: detector recall 0.947
+   class 3: detector recall 0.052
+   class 4: detector recall 0.813
+   class 5: detector recall 0.907
+D5 noise 2.073 | dist 40 | thr 0.97 | F_ident 0.823 F_class 0.710 F_dataset 0.744
+   class 1: detector recall 0.940
+   class 2: detector recall 0.947
+   class 3: detector recall 0.043
+   class 4: detector recall 0.720
+   class 5: detector recall 0.907
+D5 noise 2.073 | dist 40 | thr 0.98 | F_ident 0.807 F_class 0.695 F_dataset 0.728
+   class 1: detector recall 0.904
+   class 2: detector recall 0.947
+   class 3: detector recall 0.026
+   class 4: detector recall 0.551
+   class 5: detector recall 0.897
+D5 noise 2.073 | dist 40 | thr 0.99 | F_ident 0.773 F_class 0.667 F_dataset 0.699
+   class 1: detector recall 0.964
+   class 2: detector recall 0.968
+   class 3: detector recall 0.233
+   class 4: detector recall 0.869
+   class 5: detector recall 0.928
+D6 noise 3.065 | dist 15 | thr 0.7 | F_ident 0.709 F_class 0.492 F_dataset 0.557
+   class 1: detector recall 0.928
+   class 2: detector recall 0.947
+   class 3: detector recall 0.121
+   class 4: detector recall 0.766
+   class 5: detector recall 0.918
+D6 noise 3.065 | dist 15 | thr 0.85 | F_ident 0.774 F_class 0.545 F_dataset 0.613
+   class 1: detector recall 0.904
+   class 2: detector recall 0.947
+   class 3: detector recall 0.078
+   class 4: detector recall 0.729
+   class 5: detector recall 0.918
+D6 noise 3.065 | dist 15 | thr 0.9 | F_ident 0.778 F_class 0.549 F_dataset 0.618
+   class 1: detector recall 0.880
+   class 2: detector recall 0.936
+   class 3: detector recall 0.069
+   class 4: detector recall 0.598
+   class 5: detector recall 0.918
+D6 noise 3.065 | dist 15 | thr 0.93 | F_ident 0.763 F_class 0.545 F_dataset 0.610
+   class 1: detector recall 0.867
+   class 2: detector recall 0.926
+   class 3: detector recall 0.052
+   class 4: detector recall 0.505
+   class 5: detector recall 0.918
+D6 noise 3.065 | dist 15 | thr 0.95 | F_ident 0.746 F_class 0.530 F_dataset 0.595
+   class 1: detector recall 0.843
+   class 2: detector recall 0.926
+   class 3: detector recall 0.043
+   class 4: detector recall 0.383
+   class 5: detector recall 0.866
+D6 noise 3.065 | dist 15 | thr 0.97 | F_ident 0.723 F_class 0.514 F_dataset 0.577
+   class 1: detector recall 0.795
+   class 2: detector recall 0.894
+   class 3: detector recall 0.043
+   class 4: detector recall 0.318
+   class 5: detector recall 0.856
+D6 noise 3.065 | dist 15 | thr 0.98 | F_ident 0.701 F_class 0.503 F_dataset 0.562
+   class 1: detector recall 0.639
+   class 2: detector recall 0.862
+   class 3: detector recall 0.034
+   class 4: detector recall 0.234
+   class 5: detector recall 0.804
+D6 noise 3.065 | dist 15 | thr 0.99 | F_ident 0.651 F_class 0.462 F_dataset 0.519
+   class 1: detector recall 0.964
+   class 2: detector recall 0.957
+   class 3: detector recall 0.207
+   class 4: detector recall 0.869
+   class 5: detector recall 0.918
+D6 noise 3.065 | dist 25 | thr 0.7 | F_ident 0.750 F_class 0.522 F_dataset 0.591
+   class 1: detector recall 0.928
+   class 2: detector recall 0.936
+   class 3: detector recall 0.103
+   class 4: detector recall 0.766
+   class 5: detector recall 0.918
+D6 noise 3.065 | dist 25 | thr 0.85 | F_ident 0.793 F_class 0.560 F_dataset 0.630
+   class 1: detector recall 0.904
+   class 2: detector recall 0.936
+   class 3: detector recall 0.060
+   class 4: detector recall 0.729
+   class 5: detector recall 0.918
+D6 noise 3.065 | dist 25 | thr 0.9 | F_ident 0.793 F_class 0.562 F_dataset 0.632
+   class 1: detector recall 0.880
+   class 2: detector recall 0.926
+   class 3: detector recall 0.052
+   class 4: detector recall 0.598
+   class 5: detector recall 0.918
+D6 noise 3.065 | dist 25 | thr 0.93 | F_ident 0.772 F_class 0.554 F_dataset 0.620
+   class 1: detector recall 0.867
+   class 2: detector recall 0.915
+   class 3: detector recall 0.034
+   class 4: detector recall 0.505
+   class 5: detector recall 0.918
+D6 noise 3.065 | dist 25 | thr 0.95 | F_ident 0.755 F_class 0.540 F_dataset 0.604
+   class 1: detector recall 0.843
+   class 2: detector recall 0.915
+   class 3: detector recall 0.034
+   class 4: detector recall 0.383
+   class 5: detector recall 0.866
+D6 noise 3.065 | dist 25 | thr 0.97 | F_ident 0.726 F_class 0.517 F_dataset 0.580
+   class 1: detector recall 0.795
+   class 2: detector recall 0.894
+   class 3: detector recall 0.034
+   class 4: detector recall 0.318
+   class 5: detector recall 0.856
+D6 noise 3.065 | dist 25 | thr 0.98 | F_ident 0.704 F_class 0.504 F_dataset 0.564
+   class 1: detector recall 0.639
+   class 2: detector recall 0.862
+   class 3: detector recall 0.034
+   class 4: detector recall 0.234
+   class 5: detector recall 0.804
+D6 noise 3.065 | dist 25 | thr 0.99 | F_ident 0.653 F_class 0.461 F_dataset 0.518
+   class 1: detector recall 0.964
+   class 2: detector recall 0.947
+   class 3: detector recall 0.207
+   class 4: detector recall 0.869
+   class 5: detector recall 0.918
+D6 noise 3.065 | dist 40 | thr 0.7 | F_ident 0.751 F_class 0.521 F_dataset 0.590
+   class 1: detector recall 0.928
+   class 2: detector recall 0.936
+   class 3: detector recall 0.103
+   class 4: detector recall 0.766
+   class 5: detector recall 0.918
+D6 noise 3.065 | dist 40 | thr 0.85 | F_ident 0.794 F_class 0.561 F_dataset 0.631
+   class 1: detector recall 0.904
+   class 2: detector recall 0.936
+   class 3: detector recall 0.060
+   class 4: detector recall 0.729
+   class 5: detector recall 0.918
+D6 noise 3.065 | dist 40 | thr 0.9 | F_ident 0.794 F_class 0.563 F_dataset 0.632
+   class 1: detector recall 0.880
+   class 2: detector recall 0.926
+   class 3: detector recall 0.052
+   class 4: detector recall 0.598
+   class 5: detector recall 0.918
+D6 noise 3.065 | dist 40 | thr 0.93 | F_ident 0.773 F_class 0.555 F_dataset 0.621
+   class 1: detector recall 0.867
+   class 2: detector recall 0.915
+   class 3: detector recall 0.034
+   class 4: detector recall 0.505
+   class 5: detector recall 0.918
+D6 noise 3.065 | dist 40 | thr 0.95 | F_ident 0.755 F_class 0.540 F_dataset 0.604
+   class 1: detector recall 0.843
+   class 2: detector recall 0.915
+   class 3: detector recall 0.034
+   class 4: detector recall 0.383
+   class 5: detector recall 0.866
+D6 noise 3.065 | dist 40 | thr 0.97 | F_ident 0.726 F_class 0.517 F_dataset 0.580
+   class 1: detector recall 0.795
+   class 2: detector recall 0.894
+   class 3: detector recall 0.034
+   class 4: detector recall 0.318
+   class 5: detector recall 0.856
+D6 noise 3.065 | dist 40 | thr 0.98 | F_ident 0.704 F_class 0.504 F_dataset 0.564
+   class 1: detector recall 0.639
+   class 2: detector recall 0.862
+   class 3: detector recall 0.034
+   class 4: detector recall 0.234
+   class 5: detector recall 0.804
+D6 noise 3.065 | dist 40 | thr 0.99 | F_ident 0.653 F_class 0.461 F_dataset 0.518
+
 
 Conclusion setting
 Dataset	Noise	thr	   dist	Val F1
