@@ -125,7 +125,7 @@ Fill in after each automarker run.
 | Submission | Change | D2 P / R | D3 P / R | D4 P / R | D5 P / R | D6 P / R |
 |---|---|---|---|---|---|---|
 | 1 | Baseline CNNs, no drift removal | 0.970 / 0.912 | 0.958 / 0.875 | 0.944 / 0.794 | 0.322 / 0.717 | 0.132 / 0.592 |
-| 2 | Drift removal | | | | | |
+| 2 | Drift removal | 1.0/0.942 | 0.996/0.938 | 0.995/0.832 | 0.979/0.784 | 0.915/0.741 |
 
 ## Notes and limitations
 
