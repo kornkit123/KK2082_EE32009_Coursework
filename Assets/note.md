@@ -12,6 +12,7 @@ After looking at signal from D1 to D6
 
 Submission 3
 1. notice classification miss mainly on neuron class3
+this potentially because class3 is the weakest spike
 
 plan
 1. train on D1 
