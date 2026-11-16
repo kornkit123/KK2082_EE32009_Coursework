@@ -137,7 +137,9 @@ levels_extra = torch.tensor(
 
 # Applied to each training batch: random level from D1..D6, fresh Gaussian noise every time
 # Sampling weights for noise levels D1..D6 (D1 = clean, a small share keeps it in training)
-level_weights = torch.tensor([0.05, 0.10, 0.15, 0.20, 0.25, 0.30], device=DEVICE)
+level_weights = torch.tensor([0.0, 0.0, 0.05, 0.20, 0.35, 0.40], device=DEVICE)
+#try getting separate model for just high noise application -> performance doesn't improve much
+#skipping this idea
 
 augment = lambda xb: Functions.add_noise(xb, levels_extra, level_weights)
 
