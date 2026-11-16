@@ -23,10 +23,10 @@ fig, axes = plt.subplots(nrows=3, ncols=2, figsize=(15, 10))
 axes = axes.flatten()  # Flatten the 2D grid into a 1D list for easy indexing
 
 i = 0
-idx = 0
-for idx, i in enumerate(range(0, 6)):
+j = 0
+for j, i in enumerate(range(0, 6)):
     dn = ds[i]
-    ax = axes[idx]  # Select the current subplot (index 0 to 5)
+    ax = axes[j]  # Select the current subplot (index 0 to 5)
     ax.set_title(f"Dataset {i+1}")  # Note: changed from {dn} so it doesn't print the whole array
     ax.plot(dn[:100000], lw=0.5, label=f"Dataset {i+1} raw")
     baseline = median_filter(dn[:100000], size=2501)  # about 0.1 s window
