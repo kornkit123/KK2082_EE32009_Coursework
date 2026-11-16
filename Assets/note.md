@@ -1,4 +1,4 @@
-D1
+Submission1
 after looking at D1 data 
 1. notice the idx marker are at the rising edge
 2. there are 5 different unique class labelled: 1, 2, 3, 4, 5 from five different types of neuron
@@ -6,8 +6,12 @@ after looking at D1 data
 4. all noise are white noise
 5. D6 is gaussian noise
 
+Submission2
 After looking at signal from D1 to D6
-1. singal has drift which get worst with higher noise level
+1. notice singal has drift which get worst with higher noise level
+
+Submission 3
+1. notice classification miss mainly on neuron class3
 
 plan
 1. train on D1 
