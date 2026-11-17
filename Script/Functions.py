@@ -147,7 +147,7 @@ def match_f1(pred, true, tol=50):
 
 
 # functions for classifier and detection model application to dataset
-def predict_dataset(sig, thr, dist_, det, clf, mu, sigma):
+def predict_dataset(sig, thr, dist_, det, clf, mu, sigma, offsets=(0,)):
     """Detect spikes in a recording, then classify each one. Returns (Index, Class)."""
     start, stop = CLS_PRE, len(sig) - CLS_POST        # keeps classifier windows inside the signal
     probs = detect_probs(det, sig, start, stop, mu, sigma)
@@ -158,22 +158,29 @@ def predict_dataset(sig, thr, dist_, det, clf, mu, sigma):
     X = torch.tensor(((X - mu) / sigma)[:, None, :], dtype=torch.float32)
     clf.eval()
     with torch.no_grad():
-        #Class = np.concatenate([clf(X[i:i + 4096].to(device)).argmax(1).cpu().numpy()
-                               # for i in range(0, len(X), 4096)]) + 1   # back to labels 1-5
-        Class = classify(sig, Index, clf, mu, sigma) + 1      # back to labels 1-5
+        Class = classify(sig, Index, clf, mu, sigma, offsets) + 1      # back to labels 1-5 
     return Index, Class
 
-def classify(sig, Index, clf, mu, sigma, batch=4096):
-    """Class (0-4) of the spike starting at each position in Index."""
+def classify(sig, Index, clf, mu, sigma, offsets=(0,), batch=4096):
+    """Class (0-4) of the spike starting at each position in Index.
+
+    The classifier is run on windows shifted by each offset, and the class
+    probabilities are averaged before picking the class. offsets=(0,) is plain
+    classification with no averaging.
+    """
     if len(Index) == 0:
         return np.array([], dtype=int)
-    X = windows(sig, Index, CLS_PRE, CLS_POST)
-    X = torch.tensor(((X - mu) / sigma)[:, None, :], dtype=torch.float32)
     clf.eval()
-    with torch.no_grad():
-        return np.concatenate([clf(X[i:i + batch].to(DEVICE)).argmax(1).cpu().numpy()
-                               for i in range(0, len(X), batch)])
-
+    total = None
+    for off in offsets:
+        pos = np.clip(Index + off, CLS_PRE, len(sig) - CLS_POST)   # keep the window inside the signal
+        X = windows(sig, pos, CLS_PRE, CLS_POST)
+        X = torch.tensor(((X - mu) / sigma)[:, None, :], dtype=torch.float32)
+        with torch.no_grad():
+            p = torch.cat([torch.softmax(clf(X[i:i + batch].to(DEVICE)), 1).cpu()
+                           for i in range(0, len(X), batch)])
+        total = p if total is None else total + p
+    return total.argmax(1).numpy()
 
 def match_pairs(pred, true, tol=50):
     """One-to-one matching within +/-tol samples. Returns a list of (pred_i, true_j)."""

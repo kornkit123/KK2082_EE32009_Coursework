@@ -26,7 +26,7 @@ from sklearn.metrics import confusion_matrix
 
 import Functions
 import Models
-from Config import DATA_DIR, DEVICE, DET_PRE, DET_POST, CLS_PRE, CLS_POST
+from Config import DATA_DIR, DEVICE, DET_PRE, DET_POST, CLS_PRE, CLS_POST, TTA_OFFSETS
 
 RETRAIN = True       # True: train and save models. False: load saved models.
 RUN_SWEEP = True    # True: print the threshold sweep (slow, only needed when tuning)
@@ -203,7 +203,7 @@ if RUN_SWEEP:
         sig = Functions.noisy_version(d1, level, base, rng)
         probs = Functions.detect_probs(det, sig, start, stop, mu=MU, sigma=SIGMA)
         for dist_ in (15, 25, 40):
-            for thr in (0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.93, 0.95, 0.97, 0.98):
+            for thr in (0.7, 0.8, 0.85, 0.9):
                 peaks, _ = find_peaks(probs, height=thr, distance=dist_)
                 Index = peaks + start
                 Index = Index[Index < len(sig) - CLS_POST]  # classifier window must fit
@@ -211,7 +211,7 @@ if RUN_SWEEP:
                 found = np.zeros(len(va_Index1), bool)
                 for _, j in pairs:
                     found[j] = True
-                cls = Functions.classify(sig, Index, clf, MU, SIGMA)
+                cls = Functions.classify(sig, Index, clf, MU, SIGMA, offsets=TTA_OFFSETS)
                 f_id, f_cl, f_ds = Functions.dataset_score(Index, cls, va_Index1, va_Class1 - 1)
                 rec = ' '.join(f'{found[va_Class1 == k].mean():.2f}' for k in range(1, 6))
                 print(f'D{n} noise {level:.3f} | dist {dist_} | thr {thr} | F_ident {f_id:.3f} '
@@ -233,7 +233,7 @@ out_dir.mkdir(exist_ok=True)
 print(f'D1 reference: {len(Index1)} spikes')
 for n in range(2, 7):
     thr, dist_ = settings[n]
-    Index, Class = Functions.predict_dataset(ds[n - 1], thr, dist_, det, clf, MU, SIGMA)
+    Index, Class = Functions.predict_dataset(ds[n - 1], thr, dist_, det, clf, MU, SIGMA, TTA_OFFSETS)
     print(f'D{n}: {len(Index)} spikes, class counts {np.bincount(Class, minlength=6)[1:]}')
     # Only Index and Class are saved (no raw signal d)
     spio.savemat(out_dir / f'D{n}.mat', {'Index': Index.astype(np.int64),
