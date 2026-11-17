@@ -213,3 +213,14 @@ def dataset_score(pred_idx, pred_cls, true_idx, true_cls, tol=50):
 def remove_baseline(sig, size=2501):
     """Subtract the slow baseline (about 0.1 s median) from a recording."""
     return sig - median_filter(sig, size=size)
+
+#template classifier
+def class_templates(sig, positions, labels, pre, post):
+    """Mean window for each class (labels 1-5). Returns an array of shape (5, pre + post)."""
+    W = windows(sig, positions, pre, post)
+    return np.array([W[labels == k].mean(axis=0) for k in range(1, 6)])
+
+def template_classify(X, templates):
+    """Class 0-4 of each window = nearest template in squared distance."""
+    d = ((X[:, None, :] - templates[None, :, :]) ** 2).sum(axis=2)
+    return d.argmin(axis=1)

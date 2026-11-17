@@ -2,39 +2,65 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import butter, filtfilt, welch
-from scipy.stats import kurtosis
+from scipy.stats import kurtosis, norm
 from Config import FS, DATA_DIR
 from Functions import load_data
 from pathlib import Path
 import Functions
 from scipy.ndimage import median_filter
 
-ds, Index, Class = load_data(DATA_DIR)
-d1, d6 = ds[0], ds[5]
+ds_raw, Index, Class = load_data(DATA_DIR)
 fs = FS
 PRE, POST = 40, 150
+
+#### ANALYSE NOISE CHARACTERISTICS OF D1-D6 ####
+# Before cleaning
+fig1, axes1 = plt.subplots(nrows=3, ncols=2, figsize=(15, 10))
+for j, ax in enumerate(axes1.flatten()):
+    ax.plot(ds_raw[j][:100000], lw=0.5, label=f'Dataset {j + 1} raw')
+    ax.plot(median_filter(ds_raw[j][:100000], size=2501), 'r', label='slow baseline')
+    ax.set_title(f'Dataset {j + 1}')
+    ax.legend()
+fig1.tight_layout()
+
+#clean drift 
+ds = [Functions.remove_baseline(s) for s in ds_raw]    # drift removed, same as Main.py
+d1, d6 = ds[0], ds[5]
 ok = (Index >= PRE) & (Index < len(d1) - POST)      # keep windows inside the recording
 idx, cls = Index[ok], Class[ok]
 
-#### ANALYSE NOISE CHARACTERISTICS OF D1-D6 ####
-#checking drift
+#compare before and after cleaning drift
+for n, (raw, clean) in enumerate(zip(ds_raw, ds), 1):
+    print(f'D{n} noise std: raw {Functions.noise_std(raw):.3f} -> cleaned {Functions.noise_std(clean):.3f}')
+
+#detectability ceiling for each class at D4 to D6 noise
+LEN = 60                                              # samples after spike start to use
+ok_c = Index < len(d1) - LEN
+idx_c, cls_c = Index[ok_c], Class[ok_c]
+templates = {k: np.mean([d1[t:t + LEN] for t in idx_c[cls_c == k]], axis=0) for k in range(1, 6)}
+
+Z_THR = 2.6      # assumed threshold in noise std units (about 0.5% false alarms per position)
+for name, i in (('D4', 3), ('D5', 4), ('D6', 5)):
+    sigma = Functions.noise_std(ds[i])
+    print(f'\n{name} (noise std {sigma:.2f})')
+    for k in range(1, 6):
+        d = np.sqrt(np.sum(templates[k] ** 2)) / sigma
+        print(f'  class {k}: detectability {d:.2f} -> best possible recall about {norm.sf(Z_THR - d):.2f}')
+    for a, b in ((4, 5), (1, 2)):
+        d = np.sqrt(np.sum((templates[a] - templates[b]) ** 2)) / sigma
+        print(f'  classes {a} vs {b}: separation {d:.2f} -> best possible error about {norm.sf(d / 2):.2f}')
+
+#checking after clearning drift
 # Create a 3x2 grid of subplots before the loop
-fig, axes = plt.subplots(nrows=3, ncols=2, figsize=(15, 10))
-axes = axes.flatten()  # Flatten the 2D grid into a 1D list for easy indexing
-
-i = 0
-j = 0
-for j, i in enumerate(range(0, 6)):
-    dn = ds[i]
-    ax = axes[j]  # Select the current subplot (index 0 to 5)
-    ax.set_title(f"Dataset {i+1}")  # Note: changed from {dn} so it doesn't print the whole array
-    ax.plot(dn[:100000], lw=0.5, label=f"Dataset {i+1} raw")
-    baseline = median_filter(dn[:100000], size=2501)  # about 0.1 s window
-    ax.plot(baseline, "r", label="slow baseline")
+# After cleaning
+fig2, axes2 = plt.subplots(nrows=3, ncols=2, figsize=(15, 10))
+for j, ax in enumerate(axes2.flatten()):
+    ax.plot(ds[j][:100000], lw=0.5, label=f'Dataset {j + 1} cleaned')
+    ax.plot(median_filter(ds[j][:100000], size=2501), 'r', label='slow baseline')
+    ax.set_title(f'Dataset {j + 1}')
     ax.legend()
-    i += 1  # Don't forget to increment i!
+fig2.tight_layout()
 
-plt.tight_layout()  # Adjusts spacing so titles and labels don't overlap
 plt.show()  # Show all 6 plots at once after the loop finishes
 
 #check if noise form D2 to D6 is white (flat) or coloured

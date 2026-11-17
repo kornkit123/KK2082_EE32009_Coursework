@@ -15,6 +15,12 @@ Submission 3
 this potentially because class3 is the weakest spike
 2. Classes 4 and 5 have similar shapes and differ mainly in amplitude (2.7 against 4.3). Noise blurs the amplitude, which is why 4 and 5 swap labels, especially at D6.
 3. Classes 1 and 2 have similar peaks (4.9 and 5.4). Class 1 is narrower, and Class 2 has a deeper undershoot after the peak and a bump later. Both are small features that noise hides.
+4. try time average to imporve fixing wrong labels --> but the performance got slightly worst. checked from running sweep
+Dataset	Row	         Plain	   Averaged	   Change
+D3	   thr 0.9, dist 15	0.951	   0.951	       0
+D4	   thr 0.9, dist 25	0.885	   0.887	       +0.002
+D5	   thr 0.8, dist 25	0.733	   0.733	       0
+D6	   thr 0.8, dist 25	0.579	   0.567	       -0.012
 
 plan
 1. train on D1 

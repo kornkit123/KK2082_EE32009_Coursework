@@ -186,7 +186,11 @@ for v in val_sets:
     sig = Functions.noisy_version(d1, v['level'], base, rng)
     Xj = Functions.windows(sig, va_Index1, CLS_PRE, CLS_POST, jitter=10, rng=rng)
     acc_j = Functions.accuracy(clf, Xj, v['y'], MU, SIGMA)
+    templates = Functions.class_templates(d1, tr_Index1, tr_Class1, CLS_PRE, CLS_POST)
+    acc_t = (Functions.template_classify(v['X'], templates) == v['y']).mean()
+    acc_tj = (Functions.template_classify(Xj, templates) == v['y']).mean()
 
+    print(f"   template classifier: aligned {acc_t:.3f} | jittered {acc_tj:.3f}")
     print(f"noise std {v['level']:.3f} | aligned acc {acc:.3f} | jittered acc {acc_j:.3f}")
     print(confusion_matrix(v['y'], pred))
 
