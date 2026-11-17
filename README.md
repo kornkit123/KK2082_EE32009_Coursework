@@ -14,7 +14,10 @@ produces an `Index` vector (spike start positions) and a `Class` vector (1-5).
    is white and Gaussian, so it can be simulated.
 3. **Training data.** Spike, background and hard-negative windows are cut from
    clean D1. Fresh Gaussian noise at a randomly chosen D1-D6 level is added to
-   every training batch, so the models never see the same noise twice.
+   every training batch, so the models never see the same noise twice. Levels are
+   sampled with weights that rise with noise (D1 0.05 up to D6 0.30), roughly
+   matching the marking weights. Class 3 spikes are repeated three times in the
+   detector's positive set because they are the smallest and easiest to miss.
 4. **Two 1-D CNNs** (`SpikeCNN` in `Models.py`):
    - detector: is a spike starting at this sample? (65-sample window, 2 outputs)
    - classifier: which of the 5 neuron classes? (105-sample window, 5 outputs)
@@ -120,12 +123,52 @@ the average spike shape for each class.
 
 ## Results log
 
-Fill in after each automarker run.
+### Automarker feedback (detection precision / recall)
+
+Add a row after each automarker run.
 
 | Submission | Change | D2 P / R | D3 P / R | D4 P / R | D5 P / R | D6 P / R |
 |---|---|---|---|---|---|---|
 | 1 | Baseline CNNs, no drift removal | 0.970 / 0.912 | 0.958 / 0.875 | 0.944 / 0.794 | 0.322 / 0.717 | 0.132 / 0.592 |
-| 2 | Drift removal | 1.0 / 0.942 | 0.996 / 0.938 | 0.995 / 0.832 | 0.979 / 0.784 | 0.915 / 0.741 |
+| 2 | Drift removal | 1.000 / 0.942 | 0.996 / 0.938 | 0.995 / 0.832 | 0.979 / 0.784 | 0.915 / 0.741 |
+| 3 | | | | | | |
+
+Submission 1 returned 6,437 spikes for D5 and 14,148 for D6, against roughly
+2,900 and 3,200 real spikes. Most of those were false detections caused by
+baseline drift, which grows with the noise level. After drift removal the counts
+fell to 2,315 and 2,556.
+
+### Validation comparison of training variants
+
+Best `F_dataset` (0.3 x detection F1 + 0.7 x classification F1) per dataset from
+the validation sweep. Validation uses the held-out last 20% of D1 with simulated
+noise, with `thr` and `dist` re-tuned for every variant. Differences below about
+0.005 are within run-to-run variation.
+
+| Variant | D2 | D3 | D4 | D5 | D6 | Est. F_Final |
+|---|---|---|---|---|---|---|
+| No Class 3 oversampling, equal noise weights | - | - | 0.871 | 0.741 | 0.622 | - |
+| Class 3 x3, equal noise weights | 0.960 | 0.959 | 0.894 | 0.763 | 0.632 | 0.799 |
+| **Class 3 x3, graded weights (0.05 to 0.30)** | 0.961 | 0.958 | 0.894 | 0.766 | **0.645** | **0.804** |
+| Class 3 x5, graded weights | 0.961 | 0.957 | 0.893 | 0.752 | 0.623 | 0.793 |
+| Class 3 x3, high-noise weights (D1, D2 = 0) | 0.959 | 0.958 | 0.903 | 0.770 | 0.632 | 0.802 |
+
+Estimated F_Final = 0.1 x D2 + 0.15 x D3 + 0.2 x D4 + 0.25 x D5 + 0.3 x D6, using
+the validation scores as a stand-in for the automarker's.
+
+Findings:
+
+- **Class 3** has the weakest and smallest spike (peak about 1.5, against 2.7 to
+  5.4 for the others). At D5 and D6 noise its amplitude is about the noise level,
+  so detector recall for it stays around 0.1 whatever the training. Lowering the
+  threshold recovers some Class 3 spikes but precision falls faster, so the best
+  F1 accepts the misses.
+- **Oversampling Class 3 x3** helped at D4, where the spike is still visible
+  (Class 3 recall roughly doubled). x5 was no better.
+- **Noise weighting** made no meaningful difference. Three weightings land within
+  0.002 of each other on F_Final, so training distribution is not the bottleneck.
+- **Remaining loss** is classification at D6: about 30% of found spikes get the
+  wrong label (mainly Class 4 vs 5, and 1 vs 2).
 
 ## Notes and limitations
 

@@ -28,14 +28,14 @@ import Functions
 import Models
 from Config import DATA_DIR, DEVICE, DET_PRE, DET_POST, CLS_PRE, CLS_POST
 
-RETRAIN = False       # True: train and save models. False: load saved models.
+RETRAIN = True       # True: train and save models. False: load saved models.
 RUN_SWEEP = True    # True: print the threshold sweep (slow, only needed when tuning)
 
 MODEL_DIR = Path('models')
 MODEL_DIR.mkdir(exist_ok=True)
 
 # Detection settings per dataset: {dataset number: (threshold, min spike distance)}
-settings = {2: (0.9, 15), 3: (0.85, 15), 4: (0.93, 25), 5: (0.9, 25), 6: (0.85, 25)}
+settings = {2: (0.7, 15), 3: (0.9, 15), 4: (0.9, 25), 5: (0.8, 25), 6: (0.8, 25)}
 
 rng = np.random.default_rng(0)
 torch.manual_seed(0)
@@ -93,10 +93,15 @@ Xc = Functions.windows(d1, tr_Index1, CLS_PRE, CLS_POST, jitter=10, rng=rng)
 yc = tr_Class1.astype(int) - 1            # labels 1-5 -> 0-4
 
 # Detector: spikes (label 1), background (0) and hard negatives (0)
+c3 = tr_Index1[tr_Class1 == 3]
+c3_rep = np.repeat(c3, 3)                       # 3 extra jittered copies of every Class 3 spike
+
 Xd = np.concatenate([Functions.windows(d1, tr_Index1, DET_PRE, DET_POST, jitter=10, rng=rng),
+                     Functions.windows(d1, c3_rep, DET_PRE, DET_POST, jitter=10, rng=rng),
                      Functions.windows(d1, neg_tr, DET_PRE, DET_POST),
                      Functions.windows(d1, hn_tr, DET_PRE, DET_POST)])
 yd = np.concatenate([np.ones(len(tr_Index1)),
+                     np.ones(len(c3_rep)),
                      np.zeros(len(neg_tr)),
                      np.zeros(len(hn_tr))])
 
@@ -131,7 +136,11 @@ levels_extra = torch.tensor(
     dtype=torch.float32, device=DEVICE) / SIGMA
 
 # Applied to each training batch: random level from D1..D6, fresh Gaussian noise every time
-augment = lambda xb: Functions.add_noise(xb, levels_extra)
+# Sampling weights for noise levels D1..D6 (D1 = clean, a small share keeps it in training)
+level_weights = torch.tensor([0.05, 0.10, 0.15, 0.20, 0.25, 0.30], device=DEVICE)
+
+augment = lambda xb: Functions.add_noise(xb, levels_extra, level_weights)
+
 
 # ----------------------------------------------------------------------
 # 6. Data loaders
@@ -153,8 +162,8 @@ clf = Models.SpikeCNN(n_out=5)
 det = Models.SpikeCNN(n_out=2)
 
 if RETRAIN:
-    clf = Functions.train_model(clf, train_dl, val_dl, nn.CrossEntropyLoss(), epochs=80, patience=12, augment=augment)
-    det = Functions.train_model(det, det_dl, det_val_dl, nn.CrossEntropyLoss(), augment=augment)
+    clf = Functions.train_model(clf, train_dl, val_dl, nn.CrossEntropyLoss(), epochs=90, patience=12, augment=augment)
+    det = Functions.train_model(det, det_dl, det_val_dl, nn.CrossEntropyLoss(), epochs=70, patience=12, augment=augment)
     torch.save(clf.state_dict(), MODEL_DIR / 'clf.pt')
     torch.save(det.state_dict(), MODEL_DIR / 'det.pt')
 else:
@@ -194,17 +203,22 @@ if RUN_SWEEP:
         sig = Functions.noisy_version(d1, level, base, rng)
         probs = Functions.detect_probs(det, sig, start, stop, mu=MU, sigma=SIGMA)
         for dist_ in (15, 25, 40):
-            for thr in (0.7, 0.85, 0.9, 0.93, 0.95, 0.97, 0.98, 0.99):
+            for thr in (0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.93, 0.95, 0.97, 0.98):
                 peaks, _ = find_peaks(probs, height=thr, distance=dist_)
                 Index = peaks + start
                 Index = Index[Index < len(sig) - CLS_POST]  # classifier window must fit
+                pairs = Functions.match_pairs(Index, va_Index1)
+                found = np.zeros(len(va_Index1), bool)
+                for _, j in pairs:
+                    found[j] = True
                 cls = Functions.classify(sig, Index, clf, MU, SIGMA)
                 f_id, f_cl, f_ds = Functions.dataset_score(Index, cls, va_Index1, va_Class1 - 1)
-                print(f'D{n} noise {level:.3f} | dist {dist_} | thr {thr} | '
-                      f'F_ident {f_id:.3f} F_class {f_cl:.3f} F_dataset {f_ds:.3f}')
+                rec = ' '.join(f'{found[va_Class1 == k].mean():.2f}' for k in range(1, 6))
+                print(f'D{n} noise {level:.3f} | dist {dist_} | thr {thr} | F_ident {f_id:.3f} '
+                    f'F_class {f_cl:.3f} F_dataset {f_ds:.3f} | class recall {rec}')
                 if n >= 2 and f_ds > best.get(n, (-1,))[0]:
                     best[n] = (f_ds, thr, dist_)
-
+    
     print('\nBest per dataset:')
     for n in sorted(best):
         print(f'D{n}: F_dataset {best[n][0]:.3f} at thr {best[n][1]}, dist {best[n][2]}')

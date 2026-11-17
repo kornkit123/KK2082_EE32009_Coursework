@@ -28,8 +28,16 @@ def noisy_version(sig, target, base, rng):
     extra = np.sqrt(max(target**2 - base**2, 0))
     return sig + rng.normal(0, extra, sig.shape)
 
-def add_noise(xb, levels_extra):
-    idx = torch.randint(len(levels_extra), (len(xb),), device=xb.device)
+def add_noise(xb, levels_extra, weights=None):
+    """Add fresh Gaussian noise at a randomly chosen level.
+
+    weights: optional tensor with one sampling weight per level (need not sum to 1).
+             None = all levels equally likely.
+    """
+    if weights is None:
+        idx = torch.randint(len(levels_extra), (len(xb),), device=xb.device)
+    else:
+        idx = torch.multinomial(weights, len(xb), replacement=True)
     sigma = levels_extra[idx].view(-1, 1, 1)
     return xb + sigma * torch.randn_like(xb)
 
