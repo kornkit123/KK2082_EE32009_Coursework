@@ -5,7 +5,7 @@ import scipy.io as spio
 from pathlib import Path
 from torch.utils.data import TensorDataset, DataLoader
 from numpy.lib.stride_tricks import sliding_window_view
-from scipy.signal import find_peaks
+from scipy.signal import find_peaks, correlate
 from scipy.ndimage import median_filter
 
 from Config import DET_PRE, DET_POST, CLS_PRE, CLS_POST, DEVICE
@@ -147,12 +147,18 @@ def match_f1(pred, true, tol=50):
 
 
 # functions for classifier and detection model application to dataset
-def predict_dataset(sig, thr, dist_, det, clf, mu, sigma):
+def predict_dataset(sig, thr, dist_, det, clf, mu, sigma, mf_template=None, mf_z=None, mf_gap=40):
     """Detect spikes in a recording, then classify each one. Returns (Index, Class)."""
     start, stop = CLS_PRE, len(sig) - CLS_POST        # keeps classifier windows inside the signal
     probs = detect_probs(det, sig, start, stop, mu, sigma)
     peaks, _ = find_peaks(probs, height=thr, distance=dist_)
     Index = peaks + start
+
+    if mf_template is not None:
+        score = matched_filter_score(sig, mf_template)
+        cand, _ = find_peaks(score, height=mf_z, distance=dist_)
+        cand = cand[(cand >= CLS_PRE) & (cand < len(sig) - CLS_POST)]
+        Index = add_far_candidates(Index, cand, mf_gap)
 
     X = windows(sig, Index, CLS_PRE, CLS_POST)        # no jitter at inference
     X = torch.tensor(((X - mu) / sigma)[:, None, :], dtype=torch.float32)
@@ -224,3 +230,40 @@ def template_classify(X, templates):
     """Class 0-4 of each window = nearest template in squared distance."""
     d = ((X[:, None, :] - templates[None, :, :]) ** 2).sum(axis=2)
     return d.argmin(axis=1)
+
+#matched filter         
+def class_template(sig, positions, labels, k, length=60):
+    """Mean waveform of class k, `length` samples from each spike start."""
+    W = windows(sig, positions[labels == k], 0, length)
+    return W.mean(axis=0)
+
+
+def matched_filter_score(sig, template):
+    """Slide the template along the recording. score[t] is in noise-std units,
+    so a value of 4 means 'a spike starting at t fits 4 noise-sigmas better than nothing'."""
+    corr = correlate(sig, template, mode='valid', method='fft')
+    return corr / (noise_std(sig) * np.linalg.norm(template))
+
+
+def add_far_candidates(index, cand, min_gap=40):
+    """Keep every CNN detection and add matched-filter candidates that are more than
+    min_gap samples from all of them (so one spike is not counted twice)."""
+    index = np.sort(index)
+    if len(cand) == 0 or len(index) == 0:
+        return np.sort(np.concatenate([index, cand])).astype(int)
+    j = np.searchsorted(index, cand)
+    left = np.abs(cand - index[np.clip(j - 1, 0, len(index) - 1)])
+    right = np.abs(cand - index[np.clip(j, 0, len(index) - 1)])
+    keep = np.minimum(left, right) > min_gap
+    return np.sort(np.concatenate([index, cand[keep]]))
+
+def template_classify_shift(sig, Index, templates, shifts=range(-8, 9)):
+    """Nearest-template class (0-4). Each detection is tried at several shifts and the
+    best-matching (class, shift) pair decides the label."""
+    best = np.full((len(Index), len(templates)), np.inf)
+    for s in shifts:
+        pos = np.clip(Index + s, CLS_PRE, len(sig) - CLS_POST)
+        X = windows(sig, pos, CLS_PRE, CLS_POST)
+        d = ((X[:, None, :] - templates[None, :, :]) ** 2).sum(axis=2)
+        best = np.minimum(best, d)
+    return best.argmin(axis=1)
