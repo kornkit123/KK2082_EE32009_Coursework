@@ -28,8 +28,8 @@ import Functions
 import Models
 from Config import DATA_DIR, DEVICE, DET_PRE, DET_POST, CLS_PRE, CLS_POST
 
-RETRAIN = True       # True: train and save models. False: load saved models.
-RUN_SWEEP = True    # True: print the threshold sweep (slow, only needed when tuning)
+RETRAIN = False       # True: train and save models. False: load saved models.
+RUN_SWEEP = False    # True: print the threshold sweep (slow, only needed when tuning)
 
 MODEL_DIR = Path('models')
 MODEL_DIR.mkdir(exist_ok=True)
