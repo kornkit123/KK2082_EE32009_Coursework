@@ -28,9 +28,9 @@ import Functions
 import Models
 from Config import DATA_DIR, DEVICE, DET_PRE, DET_POST, CLS_PRE, CLS_POST
 
-RETRAIN = False       # True: train and save models. False: load saved models.
+RETRAIN = True       # True: train and save models. False: load saved models.
 RUN_SWEEP = False    # True: print the threshold sweep (slow, only needed when tuning)
-RUN_COMPARE = True
+RUN_COMPARE = False
 
 MODEL_DIR = Path('models')
 MODEL_DIR.mkdir(exist_ok=True)
@@ -281,18 +281,21 @@ if RUN_SWEEP:
 # ----------------------------------------------------------------------
 # 10. Predict D2-D6 and export Index/Class files for the automarker
 # ----------------------------------------------------------------------
-out_dir = Path('submission')
+MF_Z = None           # None = CNN only (submission 3). Try 3.5 or 4.0.
+out_dir = Path('submission' if MF_Z is None else 'submission_mf')   # keeps your v3 files safe
 out_dir.mkdir(exist_ok=True)
+
+tmpl3 = Functions.class_template(d1, tr_Index1, tr_Class1, k=3)
 
 print(f'D1 reference: {len(Index1)} spikes')
 for n in range(2, 7):
     thr, dist_ = settings[n]
-    Index, Class = Functions.predict_dataset(ds[n - 1], thr, dist_, det, clf, MU, SIGMA)
+    Index, Class = Functions.predict_dataset(ds[n - 1], thr, dist_, det, clf, MU, SIGMA,
+                                             mf_template=None if MF_Z is None else tmpl3,
+                                             mf_z=MF_Z)
     print(f'D{n}: {len(Index)} spikes, class counts {np.bincount(Class, minlength=6)[1:]}')
-    # Only Index and Class are saved (no raw signal d)
     spio.savemat(out_dir / f'D{n}.mat', {'Index': Index.astype(np.int64),
                                          'Class': Class.astype(np.int64)})
-
 # Check one saved file
 m = spio.loadmat(out_dir / 'D2.mat', squeeze_me=True)
 print(m.keys())      # should show Index and Class (plus __header__ entries)
