@@ -5,49 +5,72 @@ recordings sampled at 25 kHz. The system is trained on the labelled recording D1
 and applied to the unlabelled, noisier recordings D2-D6. For each recording it
 produces an `Index` vector (spike start positions) and a `Class` vector (1-5).
 
+## Quick start
+
+```bash
+pip install -r requirements.txt
+# put D1.mat ... D6.mat in Data/
+python Script/main.py
+```
+
+This loads the trained weights in `models/` and writes `submission/D2.mat` to
+`submission/D6.mat` in a few minutes on a CPU. No training is needed.
+
 ## Method summary
 
-1. **Drift removal.** A 2501-sample median filter estimates the slow baseline,
-   which is subtracted from every recording (D1-D6) before anything else.
+1. **Drift removal.** A 2501-sample (~0.1 s) median filter estimates the slow
+   baseline, which is subtracted from every recording (D1-D6) before anything else.
 2. **Noise estimation.** The noise level of each recording is measured with a
-   robust median-absolute-deviation estimate. A spectrum check showed the noise
-   is white and Gaussian, so it can be simulated.
+   robust median-absolute-deviation estimate. A spectrum and kurtosis check
+   (`analysis.py`) showed the noise is white and Gaussian, so it can be simulated.
 3. **Training data.** Spike, background and hard-negative windows are cut from
    clean D1. Fresh Gaussian noise at a randomly chosen D1-D6 level is added to
    every training batch, so the models never see the same noise twice. Levels are
    sampled with weights that rise with noise (D1 0.05 up to D6 0.30), roughly
    matching the marking weights. Class 3 spikes are repeated three times in the
    detector's positive set because they are the smallest and easiest to miss.
-4. **Two 1-D CNNs** (`SpikeCNN` in `Models.py`):
+4. **Two 1-D CNNs** (`SpikeCNN` in `network.py`), same architecture:
    - detector: is a spike starting at this sample? (65-sample window, 2 outputs)
    - classifier: which of the 5 neuron classes? (105-sample window, 5 outputs)
-5. **Optional fixed low-pass layer** as the first layer of each CNN. It filters
-   signal and training noise together, in training and at prediction time.
-6. **Peak picking.** `find_peaks` on the detector probabilities, with a
-   threshold and minimum spacing chosen per dataset (`settings` in `Main.py`).
-7. **Classification** of each detected spike, then export to `.mat`.
+5. **Peak picking.** `find_peaks` on the detector probabilities, with a
+   threshold and minimum spacing chosen per dataset from the validation sweep
+   (`DETECTION_SETTINGS` in `config.py`).
+6. **Classification** of each detected spike, then export to `.mat`.
 
 ## Project structure
 
 ```
-Assets/             Figures and notes (not needed to run the code)
-Data/               D1.mat ... D6.mat (not included, download from Moodle)
+Data/                 D1.mat ... D6.mat (from Moodle)
+models/               Saved weights: clf_v.3.pt (classifier), det_v.3.pt (detector)
 Script/
-    Main.py         Full pipeline: train/load models, validate, export
-    Functions.py    Data loading, windowing, noise, training, detection, scoring
-    Models.py       SpikeCNN and the fixed low-pass layer
-    Config.py       Constants (sample rate, window sizes, data path, device)
-    Analysis.py     Exploratory plots (noise spectrum, Gaussian check, drift)
-    requirements.txt
-models/             Saved weights (created by Main.py)
-submission/         Exported D2.mat ... D6.mat (created by Main.py)
+    main.py           Full pipeline: prepare data, train/load, validate, export
+    config.py         All constants and settings (paths, window sizes, training, detection)
+    data.py           Loading, drift removal, noise estimation/simulation, windowing
+    network.py        SpikeCNN, the 1-D CNN used for detection and classification
+    training.py       Tensor conversion, noise augmentation, training loop
+    inference.py      Running the trained models over a full recording
+    scoring.py        Local copy of the automarker scoring (matching, F1, F_dataset)
+    analysis.py       Exploratory plots that motivated the design (not needed to run)
+tests/                pytest unit tests for every module
+submission/           Exported D2.mat ... D6.mat (created by main.py)
+Assets/               Figures and notes (not needed to run the code)
+submission_v*/        Earlier submissions and automarker feedback
+```
+
+Data flows through the modules like this:
+
+```
+data.py ──> training.py ──> network.py (trained weights in models/)
+   │                                          │
+   └──────────────> inference.py <────────────┘ ──> submission/*.mat
+                         │
+                    scoring.py  (validation only)
 ```
 
 ## Requirements
 
 - Python 3.10 or newer
-- Libraries listed in `Script/requirements.txt`:
-  numpy, scipy, matplotlib, scikit-learn, torch
+- Libraries in `requirements.txt`: numpy, scipy, matplotlib, scikit-learn, torch, pytest
 
 A GPU is optional. The code uses CUDA if available and falls back to the CPU.
 
@@ -57,46 +80,50 @@ A GPU is optional. The code uses CUDA if available and falls back to the CPU.
 python -m venv .venv
 .venv\Scripts\activate            # Windows
 # source .venv/bin/activate       # macOS / Linux
-pip install -r Script/requirements.txt
+pip install -r requirements.txt
 ```
 
-Place `D1.mat` to `D6.mat` in the `Data/` folder, then check `DATA_DIR` in
-`Script/Config.py`. It should point to that folder, for example:
-
-```python
-DATA_DIR = Path(__file__).parent.parent / 'Data'
-```
+Place `D1.mat` to `D6.mat` in the `Data/` folder. All paths are set relative to
+the project folder in `Script/config.py`, so nothing needs editing.
 
 ## Running
 
-Run everything from the project root so `models/` and `submission/` are created there:
-
 ```bash
-python Script/Main.py
+python Script/main.py        # full pipeline -> submission/D2.mat ... D6.mat
+python Script/analysis.py    # optional exploratory plots
+python -m pytest             # run the unit tests (a few seconds)
 ```
 
-### Switches at the top of `Main.py`
+### Settings
+
+Run switches at the top of `Script/main.py`:
 
 | Setting | Meaning |
 |---|---|
-| `RETRAIN = True` | Train both models and save them to `models/` |
-| `RETRAIN = False` | Load previously saved models (fast, no training) |
-| `RUN_SWEEP = True` | Run the validation sweep over thresholds and spike spacing |
-| `RUN_SWEEP = False` | Skip the sweep |
-| `LOWPASS_HZ` | Cutoff of the fixed low-pass layer in Hz, or `None` for no filter |
-| `MODEL_TAG` | Name suffix for the saved weights, so versions do not overwrite each other |
-| `settings` | `{dataset: (threshold, min spike distance)}` used at export |
+| `RETRAIN = False` | Load saved weights from `models/` (default; trains automatically if none exist) |
+| `RETRAIN = True` | Train both models from scratch and save them (slow without a GPU) |
+| `RUN_SWEEP = True` | Score every threshold/spacing pair on validation data, print the best per dataset |
 
-Typical workflow:
+Everything else is in `Script/config.py`, including:
 
-1. First run: `RETRAIN = True`, `RUN_SWEEP = True`. Train, then read the best
-   `(threshold, distance)` per dataset from the sweep output.
-2. Copy those values into `settings`.
-3. Later runs: `RETRAIN = False`, `RUN_SWEEP = False` to re-export quickly.
+| Setting | Meaning |
+|---|---|
+| `DETECTION_SETTINGS` | `{dataset: (threshold, min spike distance)}` used at export |
+| `MODEL_TAG` | Suffix of the weight files, so versions do not overwrite each other |
+| `NOISE_LEVEL_WEIGHTS` | How often each noise level D1..D6 is drawn during training |
+| `CLASS3_REPEATS` | Extra copies of Class 3 spikes in the detector training set |
+| `DET_PRE/POST`, `CLS_PRE/POST` | Window sizes around a spike start |
 
-Retrain whenever the preprocessing, model architecture (including `LOWPASS_HZ`),
-noise augmentation or window sizes change. Changing only `settings` does not
-need a retrain.
+Typical tuning workflow:
+
+1. Set `RETRAIN = True` and `RUN_SWEEP = True`, and change `MODEL_TAG` so the old
+   weights are kept. Run, then read the best `(threshold, distance)` per dataset
+   from the sweep output.
+2. Copy those values into `DETECTION_SETTINGS`.
+3. Set both switches back to `False` to re-export quickly.
+
+Retrain whenever the preprocessing, model architecture, noise augmentation or
+window sizes change. Changing only `DETECTION_SETTINGS` does not need a retrain.
 
 ## Output
 
@@ -109,29 +136,35 @@ Zip the `.mat` files (directly in the ZIP, no subfolder) and upload to Moodle.
 The raw signal `d` is deliberately not included.
 
 The console also prints the spike count and per-class counts for each dataset,
-which is a quick sanity check against the number of spikes expected in D1.
+which is a quick sanity check against the 2,432 spikes in D1.
 
-## Exploratory analysis
+## Testing
 
-```bash
-python Script/Analysis.py
-```
+`tests/` contains 40 pytest tests (run with `python -m pytest`, a few seconds,
+no data files needed). They check:
 
-Plots the power spectra of D1-D6 (white noise check), the amplitude histogram
-of high-passed D6 (Gaussian check), the slow baseline of each recording, and
-the average spike shape for each class.
+- **data.py**: drift removal keeps spikes but removes offsets and slow drift; the
+  noise estimate is accurate and robust to spikes; simulated noise reaches the
+  target level; windows, background and hard-negative positions are correct.
+- **scoring.py**: matching follows the automarker rules (±50 samples, one-to-one,
+  closest wins), and F1 and F_dataset give the expected values for hand-worked cases.
+- **network.py / training.py**: output shapes for both window lengths; the saved
+  weights load into the current architecture; noise augmentation; the training
+  loop learns a simple task.
+- **inference.py / main.py**: on a synthetic recording with known spikes and
+  "stub" models of known behaviour, every spike and class is recovered, close
+  spikes are merged by the minimum spacing, and the exported files hold only
+  `Index` and `Class`.
 
 ## Results log
 
 ### Automarker feedback (detection precision / recall)
 
-Add a row after each automarker run.
-
 | Submission | Change | D2 P / R | D3 P / R | D4 P / R | D5 P / R | D6 P / R |
 |---|---|---|---|---|---|---|
 | 1 | Baseline CNNs, no drift removal | 0.970 / 0.912 | 0.958 / 0.875 | 0.944 / 0.794 | 0.322 / 0.717 | 0.132 / 0.592 |
 | 2 | Drift removal | 1.000 / 0.942 | 0.996 / 0.938 | 0.995 / 0.832 | 0.979 / 0.784 | 0.915 / 0.741 |
-| 3 | introduce weight level and x3 class3 signal traning|  1.0 / 0.947 | 0.999 / 0.935 | 0.985 / 0.864 |  0.981 /  0.775 | 0.910 / 0.741 |
+| 3 | Graded noise weights, Class 3 x3 | 1.000 / 0.947 | 0.999 / 0.935 | 0.985 / 0.864 | 0.981 / 0.775 | 0.910 / 0.741 |
 
 Submission 1 returned 6,437 spikes for D5 and 14,148 for D6, against roughly
 2,900 and 3,200 real spikes. Most of those were false detections caused by
