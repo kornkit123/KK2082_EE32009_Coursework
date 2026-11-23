@@ -2,7 +2,6 @@
 import numpy as np
 import pytest
 import scipy.io as spio
-
 import data
 
 
