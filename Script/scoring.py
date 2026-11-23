@@ -1,5 +1,6 @@
 """Scoring that mirrors the automarker: one-to-one matching and F1 scores."""
 import numpy as np
+
 from config import F_CLASS_WEIGHT, F_IDENT_WEIGHT, MATCH_TOLERANCE
 
 
