@@ -7,7 +7,7 @@ __pycache__/
 # Editor settings
 .vscode/
 .idea/
-.mat/
+*.mat
 
 # Generated output (recreated by Script/main.py)
 submission/
