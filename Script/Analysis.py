@@ -1,101 +1,114 @@
-#Analysis of noise characteristics of D1-D6
-import numpy as np
+"""Exploratory analysis of the recordings (not needed to produce the submission).
+
+These plots and statistics justified the main design choices:
+    - baseline drift      -> remove_baseline() before detection
+    - white noise spectra -> noise can be simulated as white noise
+    - Gaussian amplitudes -> simulated noise can be Gaussian
+    - average spike shape -> window lengths, and which classes are easy to confuse
+
+Run from the project root:
+
+    python Script/analysis.py
+"""
 import matplotlib.pyplot as plt
+import numpy as np
 from scipy.signal import butter, filtfilt, welch
 from scipy.stats import kurtosis
-from Config import FS, DATA_DIR
-from Functions import load_data
-from pathlib import Path
-import Functions
-from scipy.ndimage import median_filter
 
-ds, Index, Class = load_data(DATA_DIR)
-d1, d6 = ds[0], ds[5]
-fs = FS
-PRE, POST = 40, 150
-ok = (Index >= PRE) & (Index < len(d1) - POST)      # keep windows inside the recording
-idx, cls = Index[ok], Class[ok]
+from config import BASELINE_WINDOW, DATA_DIR, FS
+from data import load_data, remove_baseline
 
-#### ANALYSE NOISE CHARACTERISTICS OF D1-D6 ####
-#checking drift
-# Create a 3x2 grid of subplots before the loop
-fig, axes = plt.subplots(nrows=3, ncols=2, figsize=(15, 10))
-axes = axes.flatten()  # Flatten the 2D grid into a 1D list for easy indexing
-
-i = 0
-j = 0
-for j, i in enumerate(range(0, 6)):
-    dn = ds[i]
-    ax = axes[j]  # Select the current subplot (index 0 to 5)
-    ax.set_title(f"Dataset {i+1}")  # Note: changed from {dn} so it doesn't print the whole array
-    ax.plot(dn[:100000], lw=0.5, label=f"Dataset {i+1} raw")
-    baseline = median_filter(dn[:100000], size=2501)  # about 0.1 s window
-    ax.plot(baseline, "r", label="slow baseline")
-    ax.legend()
-    i += 1  # Don't forget to increment i!
-
-plt.tight_layout()  # Adjusts spacing so titles and labels don't overlap
-plt.show()  # Show all 6 plots at once after the loop finishes
-
-#check if noise form D2 to D6 is white (flat) or coloured
-f, Pxx = welch(d1, fs=fs, nperseg=4096)
-plt.figure()
-for n, sig in enumerate(ds, 1):
-    f, Pxx = welch(sig, fs=fs, nperseg=4096)
-    plt.semilogy(f, Pxx, label=f'D{n}')
-plt.xlabel('Frequency (Hz)')
-plt.ylabel('Power spectral density')
-plt.legend()
-
-#check if noise form D2 to D6 is Gaussian or non-Gaussian
+PREVIEW_SAMPLES = 5_000        # samples shown in raw-signal plots (0.2 s)
+DRIFT_SAMPLES = 100_000        # samples shown in the drift plots (4 s)
+HIGH_PASS_HZ = 4_000           # above the spike band, so what remains is mostly noise
+AVG_PRE, AVG_POST = 40, 150    # window for the average spike shape
 
 
-b, a = butter(4, 4000/(fs/2), btype='high')
-for n, sig in enumerate(ds, 1):
-    hp = filtfilt(b, a, sig)
-    print(f'D{n}: excess kurtosis {kurtosis(hp):.3f}')
-
-plt.figure()
-plt.xlabel('Amplitude after high-pass (mV)')
-plt.ylabel('Probability density')
-plt.title('D6 noise amplitude distribution')
-plt.hist(filtfilt(b, a, d6), bins=200, density=True)
-plt.show()
-
-#visualise the data
-print("d = ", len(d1), "\n", "Index = ", len(Index), "\n", "Class = ", np.unique(Class, return_counts=True))
-plt.title("D1 data")
-#limit plotting to first 5000 samples for better visibility (max 1440000 samples)
-plt.plot(d1[:5000]); plt.plot(Index[Index < 5000], d1[Index[Index < 5000]], 'rx')
-plt.show()
-
-# 4. Average spike shape for each class (all labelled spikes in D1)
-plt.figure()
-for k in range(1, 6):
-    W = np.array([d1[t - PRE : t + POST] for t in idx[cls == k]])
-    plt.plot(np.arange(-PRE, POST), W.mean(0), label=f'class {k}')
-plt.axvline(0, color='k', ls=':')
-plt.xlabel('Samples from spike start')
-plt.ylabel('Amplitude (mV)')
-plt.title('Average spike per class (D1)')
-plt.legend()
-plt.show()
+def plot_baseline_drift(recordings):
+    """Plot the start of each recording with its slow (median-filtered) baseline."""
+    fig, axes = plt.subplots(nrows=3, ncols=2, figsize=(15, 10))
+    for n, (ax, sig) in enumerate(zip(axes.flatten(), recordings), 1):
+        segment = sig[:DRIFT_SAMPLES]
+        baseline = segment - remove_baseline(segment, size=BASELINE_WINDOW)
+        ax.plot(segment, lw=0.5, label=f'D{n} raw')
+        ax.plot(baseline, 'r', label='slow baseline')
+        ax.set_title(f'D{n}')
+        ax.legend()
+    fig.tight_layout()
 
 
-#plot D2 to D6
-ds, Index, Class = Functions.load_data(DATA_DIR)
-i = 1
-for d in ds:
-    print("d = ", len(d))
+def plot_power_spectra(recordings):
+    """Plot the power spectral density of each recording (flat = white noise)."""
     plt.figure()
-    plt.title(f"D{i} data")
-    #limit plotting to first 5000 samples for better visibility (max 1440000 samples)
-    plt.plot(d[:5000]); plt.plot(Index[Index < 5000], d[Index[Index < 5000]], 'rx')
+    for n, sig in enumerate(recordings, 1):
+        freqs, power = welch(sig, fs=FS, nperseg=4096)
+        plt.semilogy(freqs, power, label=f'D{n}')
+    plt.xlabel('Frequency (Hz)')
+    plt.ylabel('Power spectral density')
+    plt.title('Power spectra of D1-D6')
+    plt.legend()
+
+
+def check_gaussian_noise(recordings):
+    """Print the excess kurtosis of each high-passed recording and plot D6's histogram.
+
+    High-passing removes most of the spike energy, leaving mainly noise.
+    Excess kurtosis near 0 means the noise is close to Gaussian.
+    """
+    b, a = butter(4, HIGH_PASS_HZ / (FS / 2), btype='high')
+    for n, sig in enumerate(recordings, 1):
+        print(f'D{n}: excess kurtosis {kurtosis(filtfilt(b, a, sig)):.3f}')
+
+    plt.figure()
+    plt.hist(filtfilt(b, a, recordings[5]), bins=200, density=True)
+    plt.xlabel('Amplitude after high-pass (mV)')
+    plt.ylabel('Probability density')
+    plt.title('D6 noise amplitude distribution')
+
+
+def plot_raw_recordings(recordings, index1):
+    """Plot the first samples of each recording; D1 also shows its labelled spike starts."""
+    for n, sig in enumerate(recordings, 1):
+        plt.figure()
+        plt.plot(sig[:PREVIEW_SAMPLES])
+        if n == 1:                      # only D1 has labels
+            shown = index1[index1 < PREVIEW_SAMPLES]
+            plt.plot(shown, sig[shown], 'rx', label='labelled spike start')
+            plt.legend()
+        plt.xlabel('Sample')
+        plt.ylabel('Amplitude (mV)')
+        plt.title(f'D{n}: first {PREVIEW_SAMPLES} samples')
+
+
+def plot_average_spikes(d1, index1, class1):
+    """Plot the mean spike shape of each class in D1."""
+    ok = (index1 >= AVG_PRE) & (index1 < len(d1) - AVG_POST)   # windows must fit
+    index1, class1 = index1[ok], class1[ok]
+    plt.figure()
+    for k in range(1, 6):
+        windows = np.array([d1[t - AVG_PRE : t + AVG_POST] for t in index1[class1 == k]])
+        plt.plot(np.arange(-AVG_PRE, AVG_POST), windows.mean(axis=0), label=f'class {k}')
+    plt.axvline(0, color='k', ls=':')
+    plt.xlabel('Samples from spike start')
+    plt.ylabel('Amplitude (mV)')
+    plt.title('Average spike per class (D1)')
+    plt.legend()
+
+
+def main():
+    """Load the data, print summary statistics and show all exploratory plots."""
+    recordings, index1, class1 = load_data(DATA_DIR)
+    classes, counts = np.unique(class1, return_counts=True)
+    print(f'D1: {len(recordings[0])} samples, {len(index1)} labelled spikes')
+    print('Spikes per class:', dict(zip(classes.tolist(), counts.tolist())))
+
+    plot_baseline_drift(recordings)
+    plot_power_spectra(recordings)
+    check_gaussian_noise(recordings)
+    plot_raw_recordings(recordings, index1)
+    plot_average_spikes(recordings[0], index1, class1)
     plt.show()
-    i += 1
 
 
-#Apply Noise Filtering
-#fs = 25000   #25 kHz sampling frequency accroding to coursework specification
-#b, a = butter(3, 2000/(fs/2), btype='low')   # try 1000-3000 Hz
-#d_f = filtfilt(b, a, d)                      # zero-phase, so no timing shift
+if __name__ == '__main__':
+    main()

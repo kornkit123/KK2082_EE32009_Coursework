@@ -1,4 +1,15 @@
-.venv/
+# Python
 __pycache__/
 *.pyc
+.venv/
+.pytest_cache/
+
+# Editor settings
+.vscode/
+.idea/
+
+# Generated output (recreated by Script/main.py)
+submission/
+
+# Archives
 *.zip

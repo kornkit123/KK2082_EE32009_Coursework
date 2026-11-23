@@ -1,22 +1,20 @@
-# Main script for EE32009 Coursework: spike detection and classification
-#
-# Pipeline overview
-#   1. Load data and remove baseline drift
-#   2. Estimate noise levels of D1-D6
-#   3. Split D1 into train / validation sets (by time)
-#   4. Build training windows (clean D1) and validation windows (D1 + noise per level)
-#   5. Normalisation constants and the noise augmentation used during training
-#   6. Build data loaders
-#   7. Train (or load) the classifier and the detector
-#   8. Validate the classifier
-#   9. Sweep detector thresholds on validation data (optional)
-#  10. Predict D2-D6 and export the .mat submission files
+"""EE32009 Coursework: spike detection and classification pipeline.
 
-# ----------------------------------------------------------------------
-# 0. Imports and settings
-# ----------------------------------------------------------------------
-from pathlib import Path
+Run from the project root:
 
+    python Script/main.py
+
+Pipeline:
+    1. Load D1-D6 and remove baseline drift
+    2. Measure the noise level of every recording
+    3. Split labelled D1 into training and validation parts (by time)
+    4. Build training windows (clean D1) and validation windows (D1 + simulated noise)
+    5. Set up normalisation and the per-batch noise augmentation
+    6. Train the detector and classifier, or load saved weights
+    7. Report classifier accuracy at each noise level
+    8. (Optional) sweep detection threshold and spacing on validation data
+    9. Detect and classify spikes in D2-D6 and export the .mat files
+"""
 import numpy as np
 import scipy.io as spio
 import torch
@@ -24,221 +22,343 @@ import torch.nn as nn
 from scipy.signal import find_peaks
 from sklearn.metrics import confusion_matrix
 
-import Functions
-import Models
-from Config import DATA_DIR, DEVICE, DET_PRE, DET_POST, CLS_PRE, CLS_POST
-
-RETRAIN = True       # True: train and save models. False: load saved models.
-RUN_SWEEP = True    # True: print the threshold sweep (slow, only needed when tuning)
-
-MODEL_DIR = Path('models')
-MODEL_DIR.mkdir(exist_ok=True)
-
-# Detection settings per dataset: {dataset number: (threshold, min spike distance)}
-settings = {2: (0.7, 15), 3: (0.9, 15), 4: (0.9, 25), 5: (0.8, 25), 6: (0.8, 25)}
-
-rng = np.random.default_rng(0)
-torch.manual_seed(0)
+import data
+import inference
+import scoring
+import training
+from config import (CLASS3_REPEATS, CLS_POST, CLS_PRE, CLF_EPOCHS, DATA_DIR, DATASET_WEIGHTS,
+                    DET_EPOCHS, DET_POST, DET_PRE, DETECTION_SETTINGS, DEVICE, EDGE_MARGIN,
+                    JITTER, MODEL_DIR, MODEL_TAG, N_BACKGROUND_CANDIDATES, BACKGROUND_MIN_GAP,
+                    NEGATIVES_PER_SPIKE, NOISE_LEVEL_WEIGHTS, PATIENCE, SEED, SUBMISSION_DIR,
+                    TRAIN_FRACTION)
+from network import SpikeCNN
 
 # ----------------------------------------------------------------------
-# 1. Load data and remove baseline drift
+# Run switches
 # ----------------------------------------------------------------------
-# ds = [D1, D2, D3, D4, D5, D6]; D1 is labelled (Index1, Class1)
-ds, Index1, Class1 = Functions.load_data(DATA_DIR)
-ds = [Functions.remove_baseline(s) for s in ds]   # same cleaning for train and test data
-d1 = ds[0]
+RETRAIN = False     # True: train both models and save them. False: load saved weights
+                    # (if no saved weights exist, the models are trained anyway).
+RUN_SWEEP = False   # True: run the threshold/spacing sweep (slow, only needed when tuning).
 
-# ----------------------------------------------------------------------
-# 2. Estimate the noise level of every dataset
-# ----------------------------------------------------------------------
-base = Functions.noise_std(d1)                        # D1's own noise level
-for n, sig in enumerate(ds, 1):
-    print(f'D{n} noise std: {Functions.noise_std(sig):.4f}')
-targets = [Functions.noise_std(sig) for sig in ds[1:]]  # measured noise of D2..D6
-levels = [base] + targets                             # noise levels of D1..D6
-
-# ----------------------------------------------------------------------
-# 3. Split D1 into training and validation parts (by time)
-# ----------------------------------------------------------------------
-M = 30                                    # margin so jittered windows stay inside the signal
-split = int(0.8 * len(d1))                # first 80% of the recording = training
-
-# Keep only spikes whose windows fit inside the recording (labels filtered together)
-ok = (Index1 > CLS_PRE + M) & (Index1 < len(d1) - CLS_POST - M)
-Index1, Class1 = Index1[ok], Class1[ok]
-
-# Gap around the split so training and validation windows never overlap
-tr = Index1 < split - CLS_POST - M
-va = Index1 >= split + CLS_PRE + M
-tr_Index1, tr_Class1 = Index1[tr], Class1[tr]
-va_Index1, va_Class1 = Index1[va], Class1[va]
-
-# Background (no-spike) positions, split the same way. Must be >100 samples from any spike.
-cand = rng.integers(CLS_PRE + M, len(d1) - CLS_POST - M, size=30000)
-dist = np.abs(cand[:, None] - Index1[None, :]).min(axis=1)
-cand = cand[dist > 100]
-neg_tr = cand[cand < split - CLS_POST - M][:3 * len(tr_Index1)]
-neg_va = cand[cand >= split + CLS_PRE + M][:3 * len(va_Index1)]
-
-# Hard negatives: positions 15-60 samples from a spike (teaches the detector exact timing)
-hn_tr = Functions.hard_negatives(tr_Index1, DET_PRE + M, split - DET_POST - M, Index1, rng)
-hn_va = Functions.hard_negatives(va_Index1, split + DET_PRE + M, len(d1) - DET_POST - M, Index1, rng)
-
-# ----------------------------------------------------------------------
-# 4. Build training and validation windows
-# ----------------------------------------------------------------------
-# Training data: CLEAN D1 windows. Noise is added fresh every batch during training (section 5).
-# Classifier: spike windows only, with timing jitter
-Xc = Functions.windows(d1, tr_Index1, CLS_PRE, CLS_POST, jitter=10, rng=rng)
-yc = tr_Class1.astype(int) - 1            # labels 1-5 -> 0-4
-
-# Detector: spikes (label 1), background (0) and hard negatives (0)
-c3 = tr_Index1[tr_Class1 == 3]
-c3_rep = np.repeat(c3, 3)                       # 3 extra jittered copies of every Class 3 spike
-
-Xd = np.concatenate([Functions.windows(d1, tr_Index1, DET_PRE, DET_POST, jitter=10, rng=rng),
-                     Functions.windows(d1, c3_rep, DET_PRE, DET_POST, jitter=10, rng=rng),
-                     Functions.windows(d1, neg_tr, DET_PRE, DET_POST),
-                     Functions.windows(d1, hn_tr, DET_PRE, DET_POST)])
-yd = np.concatenate([np.ones(len(tr_Index1)),
-                     np.ones(len(c3_rep)),
-                     np.zeros(len(neg_tr)),
-                     np.zeros(len(hn_tr))])
-
-# Validation data: FIXED noisy copies of the held-out part of D1, one per noise level D1..D6
-det_val = []      # detector validation sets, one (X, y) per level
-val_sets = []     # classifier validation sets, one dict per level
-for level in levels:
-    sig = Functions.noisy_version(d1, level, base, rng)
-
-    Xv = np.concatenate([Functions.windows(sig, va_Index1, DET_PRE, DET_POST),
-                         Functions.windows(sig, neg_va, DET_PRE, DET_POST),
-                         Functions.windows(sig, hn_va, DET_PRE, DET_POST)])
-    yv = np.concatenate([np.ones(len(va_Index1)), np.zeros(len(neg_va)), np.zeros(len(hn_va))])
-    det_val.append((Xv, yv))
-
-    val_sets.append({'level': level,
-                     'X': Functions.windows(sig, va_Index1, CLS_PRE, CLS_POST),
-                     'y': va_Class1 - 1})
-
-Xc_va = np.concatenate([v['X'] for v in val_sets])
-yc_va = np.concatenate([v['y'] for v in val_sets])
-
-# ----------------------------------------------------------------------
-# 5. Normalisation constants and noise augmentation
-# ----------------------------------------------------------------------
-# Every window is normalised as (x - MU) / SIGMA, in training and at prediction time
-MU, SIGMA = float(np.median(d1)), float(d1.std())
-
-# Extra noise std (in normalised units) needed to bring D1 up to each dataset's noise level
-levels_extra = torch.tensor(
-    [np.sqrt(max(l**2 - base**2, 0)) for l in levels],
-    dtype=torch.float32, device=DEVICE) / SIGMA
-
-# Applied to each training batch: random level from D1..D6, fresh Gaussian noise every time
-# Sampling weights for noise levels D1..D6 (D1 = clean, a small share keeps it in training)
-level_weights = torch.tensor([0.05, 0.10, 0.15, 0.20, 0.25, 0.30], device=DEVICE)
-
-augment = lambda xb: Functions.add_noise(xb, levels_extra, level_weights)
+# Thresholds and spacings tried by the sweep
+SWEEP_THRESHOLDS = (0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.93, 0.95, 0.97, 0.98)
+SWEEP_DISTANCES = (15, 25, 40)
 
 
 # ----------------------------------------------------------------------
-# 6. Data loaders
+# 1-2. Loading and noise levels
 # ----------------------------------------------------------------------
-train_dl = Functions.make_loader(Xc, yc, shuffle=True, mu=MU, sigma=SIGMA)
-val_dl = Functions.make_loader(Xc_va, yc_va, shuffle=False, mu=MU, sigma=SIGMA)
+def load_recordings():
+    """Load D1-D6, remove baseline drift from every one, and return them with D1's labels."""
+    recordings, index1, class1 = data.load_data(DATA_DIR)
+    # Same cleaning for training (D1) and test (D2-D6) data
+    recordings = [data.remove_baseline(sig) for sig in recordings]
+    return recordings, index1, class1
 
-det_dl = Functions.make_loader(Xd, yd, shuffle=True, mu=MU, sigma=SIGMA)
-det_val_dl = Functions.make_loader(np.concatenate([x for x, _ in det_val]),
-                                   np.concatenate([y for _, y in det_val]),
-                                   shuffle=False, mu=MU, sigma=SIGMA)
 
-# ----------------------------------------------------------------------
-# 7. Train or load the two models
-#    clf: which of the 5 neuron classes is this spike?   (5 outputs)
-#    det: is there a spike starting here?                (2 outputs)
-# ----------------------------------------------------------------------
-clf = Models.SpikeCNN(n_out=5)
-det = Models.SpikeCNN(n_out=2)
+def measure_noise_levels(recordings):
+    """Print and return the estimated noise std of each recording.
 
-if RETRAIN:
-    clf = Functions.train_model(clf, train_dl, val_dl, nn.CrossEntropyLoss(), epochs=90, patience=12, augment=augment)
-    det = Functions.train_model(det, det_dl, det_val_dl, nn.CrossEntropyLoss(), epochs=70, patience=12, augment=augment)
-    torch.save(clf.state_dict(), MODEL_DIR / 'clf.pt')
-    torch.save(det.state_dict(), MODEL_DIR / 'det.pt')
-else:
-    clf.load_state_dict(torch.load(MODEL_DIR / 'clf.pt', map_location=DEVICE))
-    det.load_state_dict(torch.load(MODEL_DIR / 'det.pt', map_location=DEVICE))
+    Returns:
+        base:   noise std of D1.
+        levels: list of noise std for D1..D6 (levels[0] == base).
+    """
+    levels = [data.noise_std(sig) for sig in recordings]
+    for n, level in enumerate(levels, 1):
+        print(f'D{n} noise std: {level:.4f}')
+    return levels[0], levels
 
-clf.to(DEVICE).eval()
-det.to(DEVICE).eval()
 
 # ----------------------------------------------------------------------
-# 8. Validate the classifier at each noise level (D1..D6)
+# 3. Train / validation split of D1
 # ----------------------------------------------------------------------
-for v in val_sets:
-    X = torch.tensor(((v['X'] - MU) / SIGMA)[:, None, :], dtype=torch.float32).to(DEVICE)
-    with torch.no_grad():
-        pred = clf(X).argmax(1).cpu().numpy()
-    acc = (pred == v['y']).mean()
+def split_d1(n_samples, index1, class1, rng):
+    """Split D1 by time into training (first 80%) and validation (last 20%) positions.
 
-    # Same check with jittered windows (closer to detections that are slightly off)
-    sig = Functions.noisy_version(d1, v['level'], base, rng)
-    Xj = Functions.windows(sig, va_Index1, CLS_PRE, CLS_POST, jitter=10, rng=rng)
-    acc_j = Functions.accuracy(clf, Xj, v['y'], MU, SIGMA)
+    A gap of one window plus EDGE_MARGIN is left on each side of the split
+    point, so no training window overlaps a validation window.
 
-    print(f"noise std {v['level']:.3f} | aligned acc {acc:.3f} | jittered acc {acc_j:.3f}")
-    print(confusion_matrix(v['y'], pred))
+    Returns:
+        dict with spike positions/classes and background/hard-negative
+        positions for each part, plus the split point.
+    """
+    split = int(TRAIN_FRACTION * n_samples)
+
+    # Keep only spikes whose (jittered) classifier window fits inside the recording
+    ok = (index1 > CLS_PRE + EDGE_MARGIN) & (index1 < n_samples - CLS_POST - EDGE_MARGIN)
+    index1, class1 = index1[ok], class1[ok]
+
+    train_end = split - CLS_POST - EDGE_MARGIN        # last usable training position
+    val_start = split + CLS_PRE + EDGE_MARGIN         # first usable validation position
+    is_train, is_val = index1 < train_end, index1 >= val_start
+
+    # Background ("no spike") positions, split the same way
+    background = data.background_positions(
+        index1, CLS_PRE + EDGE_MARGIN, n_samples - CLS_POST - EDGE_MARGIN,
+        N_BACKGROUND_CANDIDATES, BACKGROUND_MIN_GAP, rng)
+    n_train_spikes, n_val_spikes = is_train.sum(), is_val.sum()
+
+    parts = {
+        'split': split,
+        'index': index1, 'class': class1,                       # all usable D1 spikes
+        'train_index': index1[is_train], 'train_class': class1[is_train],
+        'val_index': index1[is_val], 'val_class': class1[is_val],
+        'train_background': background[background < train_end][:NEGATIVES_PER_SPIKE * n_train_spikes],
+        'val_background': background[background >= val_start][:NEGATIVES_PER_SPIKE * n_val_spikes],
+    }
+    # Hard negatives: 15-60 samples from a real spike (teach the detector exact timing)
+    parts['train_hard_neg'] = data.hard_negative_positions(
+        parts['train_index'], DET_PRE + EDGE_MARGIN, split - DET_POST - EDGE_MARGIN, index1, rng)
+    parts['val_hard_neg'] = data.hard_negative_positions(
+        parts['val_index'], split + DET_PRE + EDGE_MARGIN, n_samples - DET_POST - EDGE_MARGIN, index1, rng)
+    return parts
+
 
 # ----------------------------------------------------------------------
-# 9. Detector threshold sweep on validation data (optional)
-#    Use it to choose the (threshold, distance) pair for each dataset in `settings`.
+# 4. Training and validation windows
 # ----------------------------------------------------------------------
-WEIGHTS = {2: 0.10, 3: 0.15, 4: 0.20, 5: 0.25, 6: 0.30}   # F_Final weights
+def build_training_windows(d1, parts, rng):
+    """Cut CLEAN training windows from D1 (noise is added later, per batch).
 
-if RUN_SWEEP:
-    start, stop = split + DET_PRE + M, len(d1) - DET_POST - M
-    best = {}                                              # dataset number -> (F_dataset, thr, dist)
-    for n, level in enumerate(levels, 1):                  # n = 1 is D1, n = 2 is D2, ...
-        sig = Functions.noisy_version(d1, level, base, rng)
-        probs = Functions.detect_probs(det, sig, start, stop, mu=MU, sigma=SIGMA)
-        for dist_ in (15, 25, 40):
-            for thr in (0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.93, 0.95, 0.97, 0.98):
-                peaks, _ = find_peaks(probs, height=thr, distance=dist_)
-                Index = peaks + start
-                Index = Index[Index < len(sig) - CLS_POST]  # classifier window must fit
-                pairs = Functions.match_pairs(Index, va_Index1)
-                found = np.zeros(len(va_Index1), bool)
-                for _, j in pairs:
-                    found[j] = True
-                cls = Functions.classify(sig, Index, clf, MU, SIGMA)
-                f_id, f_cl, f_ds = Functions.dataset_score(Index, cls, va_Index1, va_Class1 - 1)
-                rec = ' '.join(f'{found[va_Class1 == k].mean():.2f}' for k in range(1, 6))
-                print(f'D{n} noise {level:.3f} | dist {dist_} | thr {thr} | F_ident {f_id:.3f} '
-                    f'F_class {f_cl:.3f} F_dataset {f_ds:.3f} | class recall {rec}')
+    Returns:
+        (clf_x, clf_y): classifier windows and labels 0-4 (spikes only, jittered).
+        (det_x, det_y): detector windows and labels (1 = spike start, 0 = not).
+    """
+    train_index, train_class = parts['train_index'], parts['train_class']
+
+    clf_x = data.extract_windows(d1, train_index, CLS_PRE, CLS_POST, jitter=JITTER, rng=rng)
+    clf_y = train_class.astype(int) - 1                   # labels 1-5 -> 0-4
+
+    # Class 3 is the smallest spike and the one most often missed, so the detector
+    # sees extra jittered copies of it
+    class3_repeated = np.repeat(train_index[train_class == 3], CLASS3_REPEATS)
+
+    det_x = np.concatenate([
+        data.extract_windows(d1, train_index, DET_PRE, DET_POST, jitter=JITTER, rng=rng),
+        data.extract_windows(d1, class3_repeated, DET_PRE, DET_POST, jitter=JITTER, rng=rng),
+        data.extract_windows(d1, parts['train_background'], DET_PRE, DET_POST),
+        data.extract_windows(d1, parts['train_hard_neg'], DET_PRE, DET_POST),
+    ])
+    det_y = np.concatenate([
+        np.ones(len(train_index)),
+        np.ones(len(class3_repeated)),
+        np.zeros(len(parts['train_background'])),
+        np.zeros(len(parts['train_hard_neg'])),
+    ])
+    return (clf_x, clf_y), (det_x, det_y)
+
+
+def build_validation_windows(d1, parts, levels, base, rng):
+    """Make FIXED noisy copies of D1, one per noise level D1..D6, and cut validation windows.
+
+    Fixed (rather than fresh) noise means validation loss is comparable between epochs.
+
+    Returns:
+        clf_val_sets: list of dicts {'level', 'x', 'y'}, one per noise level.
+        (det_x, det_y): detector validation windows and labels, all levels together.
+    """
+    val_index, val_class = parts['val_index'], parts['val_class']
+    clf_val_sets, det_x, det_y = [], [], []
+    for level in levels:
+        sig = data.noisy_version(d1, level, base, rng)
+
+        det_x.append(np.concatenate([
+            data.extract_windows(sig, val_index, DET_PRE, DET_POST),
+            data.extract_windows(sig, parts['val_background'], DET_PRE, DET_POST),
+            data.extract_windows(sig, parts['val_hard_neg'], DET_PRE, DET_POST),
+        ]))
+        det_y.append(np.concatenate([
+            np.ones(len(val_index)),
+            np.zeros(len(parts['val_background'])),
+            np.zeros(len(parts['val_hard_neg'])),
+        ]))
+        clf_val_sets.append({'level': level,
+                             'x': data.extract_windows(sig, val_index, CLS_PRE, CLS_POST),
+                             'y': val_class - 1})
+    return clf_val_sets, (np.concatenate(det_x), np.concatenate(det_y))
+
+
+# ----------------------------------------------------------------------
+# 5-6. Augmentation, training and loading
+# ----------------------------------------------------------------------
+def make_augmenter(levels, base, sigma):
+    """Return a function that adds fresh noise at a random D1..D6 level to a batch.
+
+    Noise is in normalised units (divided by sigma), because the batches are
+    already normalised when the function is applied.
+    """
+    levels_extra = torch.tensor([np.sqrt(max(level**2 - base**2, 0)) for level in levels],
+                                dtype=torch.float32, device=DEVICE) / sigma
+    level_weights = torch.tensor(NOISE_LEVEL_WEIGHTS, device=DEVICE)
+    return lambda xb: training.add_noise(xb, levels_extra, level_weights)
+
+
+def model_paths():
+    """File paths of the saved classifier and detector weights."""
+    return MODEL_DIR / f'clf_{MODEL_TAG}.pt', MODEL_DIR / f'det_{MODEL_TAG}.pt'
+
+
+def train_or_load_models(train_sets, val_sets, mu, sigma, augment, retrain):
+    """Train and save both networks, or load previously saved weights.
+
+    Args:
+        train_sets: ((clf_x, clf_y), (det_x, det_y)) clean training windows.
+        val_sets:   (clf_val_sets, (det_x, det_y)) validation windows.
+        mu, sigma:  normalisation constants.
+        augment:    per-batch noise function from make_augmenter.
+        retrain:    force training even if saved weights exist.
+
+    Returns:
+        (classifier, detector), both on DEVICE in eval mode.
+    """
+    (clf_x, clf_y), (det_x, det_y) = train_sets
+    clf_val_sets, (det_val_x, det_val_y) = val_sets
+    clf_path, det_path = model_paths()
+
+    classifier, detector = SpikeCNN(n_out=5), SpikeCNN(n_out=2)
+
+    if retrain or not (clf_path.exists() and det_path.exists()):
+        print('Training classifier...')
+        clf_val_x = np.concatenate([v['x'] for v in clf_val_sets])
+        clf_val_y = np.concatenate([v['y'] for v in clf_val_sets])
+        classifier = training.train_model(
+            classifier,
+            training.make_loader(clf_x, clf_y, shuffle=True, mu=mu, sigma=sigma),
+            training.make_loader(clf_val_x, clf_val_y, shuffle=False, mu=mu, sigma=sigma),
+            nn.CrossEntropyLoss(), epochs=CLF_EPOCHS, patience=PATIENCE, augment=augment)
+
+        print('Training detector...')
+        detector = training.train_model(
+            detector,
+            training.make_loader(det_x, det_y, shuffle=True, mu=mu, sigma=sigma),
+            training.make_loader(det_val_x, det_val_y, shuffle=False, mu=mu, sigma=sigma),
+            nn.CrossEntropyLoss(), epochs=DET_EPOCHS, patience=PATIENCE, augment=augment)
+
+        MODEL_DIR.mkdir(exist_ok=True)
+        torch.save(classifier.state_dict(), clf_path)
+        torch.save(detector.state_dict(), det_path)
+        print(f'Saved weights to {clf_path.name} and {det_path.name}')
+    else:
+        print(f'Loading saved weights {clf_path.name} and {det_path.name}')
+        classifier.load_state_dict(torch.load(clf_path, map_location=DEVICE))
+        detector.load_state_dict(torch.load(det_path, map_location=DEVICE))
+
+    return classifier.to(DEVICE).eval(), detector.to(DEVICE).eval()
+
+
+# ----------------------------------------------------------------------
+# 7-8. Validation
+# ----------------------------------------------------------------------
+def validate_classifier(classifier, clf_val_sets, d1, parts, base, mu, sigma, rng):
+    """Print classifier accuracy and confusion matrix at each noise level.
+
+    Accuracy is reported twice: on perfectly aligned windows, and on windows
+    shifted by up to +/- JITTER samples, which is closer to real detections.
+    """
+    for v in clf_val_sets:
+        predicted = inference.classify_windows(classifier, v['x'], mu, sigma)
+        aligned_acc = (predicted == v['y']).mean()
+
+        sig = data.noisy_version(d1, v['level'], base, rng)
+        jittered = data.extract_windows(sig, parts['val_index'], CLS_PRE, CLS_POST,
+                                        jitter=JITTER, rng=rng)
+        jittered_acc = training.accuracy(classifier, jittered, v['y'], mu, sigma)
+
+        print(f"noise std {v['level']:.3f} | aligned acc {aligned_acc:.3f} "
+              f"| jittered acc {jittered_acc:.3f}")
+        print(confusion_matrix(v['y'], predicted))
+
+
+def sweep_detection_settings(detector, classifier, d1, parts, levels, base, mu, sigma, rng):
+    """Score every (threshold, spacing) pair on noisy validation copies of D1.
+
+    Prints every result, then the best pair per dataset and the estimated
+    F_Final. Copy the best pairs into DETECTION_SETTINGS in config.py.
+
+    Returns:
+        dict {dataset number: (best F_dataset, threshold, spacing)} for D2-D6.
+    """
+    start, stop = parts['split'] + DET_PRE + EDGE_MARGIN, len(d1) - DET_POST - EDGE_MARGIN
+    val_index, val_class = parts['val_index'], parts['val_class']
+    best = {}
+    for n, level in enumerate(levels, 1):                 # n = 1 is D1, n = 2 is D2, ...
+        sig = data.noisy_version(d1, level, base, rng)
+        probs = inference.detection_probabilities(detector, sig, start, stop, mu, sigma)
+        for min_distance in SWEEP_DISTANCES:
+            for threshold in SWEEP_THRESHOLDS:
+                peaks, _ = find_peaks(probs, height=threshold, distance=min_distance)
+                index = peaks + start
+                index = index[index < len(sig) - CLS_POST]   # classifier window must fit
+                cls = inference.classify(sig, index, classifier, mu, sigma)
+                f_id, f_cl, f_ds = scoring.dataset_score(index, cls, val_index, val_class - 1)
+                recall = scoring.recall_per_class(index, val_index, val_class)
+                recall_text = ' '.join(f'{r:.2f}' for r in recall.values())
+                print(f'D{n} noise {level:.3f} | dist {min_distance} | thr {threshold} '
+                      f'| F_ident {f_id:.3f} F_class {f_cl:.3f} F_dataset {f_ds:.3f} '
+                      f'| class recall {recall_text}')
                 if n >= 2 and f_ds > best.get(n, (-1,))[0]:
-                    best[n] = (f_ds, thr, dist_)
-    
+                    best[n] = (f_ds, threshold, min_distance)
+
     print('\nBest per dataset:')
     for n in sorted(best):
         print(f'D{n}: F_dataset {best[n][0]:.3f} at thr {best[n][1]}, dist {best[n][2]}')
-    print(f'Estimated F_Final: {sum(WEIGHTS[n] * best[n][0] for n in WEIGHTS):.3f}')
+    print(f'Estimated F_Final: {sum(DATASET_WEIGHTS[n] * best[n][0] for n in DATASET_WEIGHTS):.3f}')
+    return best
+
 
 # ----------------------------------------------------------------------
-# 10. Predict D2-D6 and export Index/Class files for the automarker
+# 9. Export
 # ----------------------------------------------------------------------
-out_dir = Path('submission')
-out_dir.mkdir(exist_ok=True)
+def export_submission(recordings, detector, classifier, mu, sigma,
+                      settings=DETECTION_SETTINGS, out_dir=SUBMISSION_DIR):
+    """Detect and classify spikes in D2-D6 and save D2.mat ... D6.mat.
 
-print(f'D1 reference: {len(Index1)} spikes')
-for n in range(2, 7):
-    thr, dist_ = settings[n]
-    Index, Class = Functions.predict_dataset(ds[n - 1], thr, dist_, det, clf, MU, SIGMA)
-    print(f'D{n}: {len(Index)} spikes, class counts {np.bincount(Class, minlength=6)[1:]}')
-    # Only Index and Class are saved (no raw signal d)
-    spio.savemat(out_dir / f'D{n}.mat', {'Index': Index.astype(np.int64),
-                                         'Class': Class.astype(np.int64)})
+    Each file holds only `Index` and `Class`. The raw signal `d` is left out,
+    as the brief asks, to keep the files small.
 
-# Check one saved file
-m = spio.loadmat(out_dir / 'D2.mat', squeeze_me=True)
-print(m.keys())      # should show Index and Class (plus __header__ entries)
+    Args:
+        recordings: list [D1, ..., D6] (baseline removed).
+        settings:   {dataset number: (threshold, min spacing)}.
+        out_dir:    folder to write the .mat files to.
+    """
+    out_dir.mkdir(parents=True, exist_ok=True)
+    for n in range(2, 7):
+        threshold, min_distance = settings[n]
+        index, cls = inference.predict_dataset(recordings[n - 1], threshold, min_distance,
+                                               detector, classifier, mu, sigma)
+        print(f'D{n}: {len(index)} spikes, class counts {np.bincount(cls, minlength=6)[1:]}')
+        spio.savemat(out_dir / f'D{n}.mat', {'Index': index.astype(np.int64),
+                                             'Class': cls.astype(np.int64)})
+    print(f'Submission files written to {out_dir}')
+
+
+def main():
+    """Run the full pipeline: load, prepare data, train/load, validate, export."""
+    rng = np.random.default_rng(SEED)
+    torch.manual_seed(SEED)
+
+    recordings, index1, class1 = load_recordings()
+    d1 = recordings[0]
+    base, levels = measure_noise_levels(recordings)
+
+    parts = split_d1(len(d1), index1, class1, rng)
+    train_sets = build_training_windows(d1, parts, rng)
+    clf_val_sets, det_val = build_validation_windows(d1, parts, levels, base, rng)
+
+    # Every window is normalised as (x - mu) / sigma, in training and at prediction time
+    mu, sigma = float(np.median(d1)), float(d1.std())
+    augment = make_augmenter(levels, base, sigma)
+
+    classifier, detector = train_or_load_models(train_sets, (clf_val_sets, det_val),
+                                                mu, sigma, augment, RETRAIN)
+
+    validate_classifier(classifier, clf_val_sets, d1, parts, base, mu, sigma, rng)
+    if RUN_SWEEP:
+        sweep_detection_settings(detector, classifier, d1, parts, levels, base, mu, sigma, rng)
+
+    print(f"D1 reference: {len(parts['index'])} spikes")
+    export_submission(recordings, detector, classifier, mu, sigma)
+
+
+if __name__ == '__main__':
+    main()
